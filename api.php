@@ -6,6 +6,12 @@ if (!preg_match('#/api/([^/]+)(.*)#', $_SERVER['REQUEST_URI'], $matches)) {
     exit;
 }
 $method = strtolower($matches[1]);
+$matches[2] = ltrim($matches[2], '/');
+$params = [];
+if ($matches[2]) {
+    $params = explode('/', $matches[2]);
+}
+
 if ($method == 'meet') {
     $obj = API::query('/meet/_search?size=10000');
     $records = array();
@@ -18,11 +24,10 @@ if ($method == 'meet') {
     }
     echo json_encode($records);
     exit;
-} else if ($method == 'speech') {
-    list(, $id) = explode('/', $matches[2]);
+} else if ($method == 'speech' and $meet_id = $params[0]) {
     $cmd = [
         'query' => array(
-            'match' => array('meet_id' => $id),
+            'match' => array('meet_id' => $meet_id),
         ),
         'sort' => 'lineno',
         'size' => 10000,
@@ -36,12 +41,10 @@ if ($method == 'meet') {
     }
     echo json_encode($records, JSON_UNESCAPED_UNICODE);
     exit;
-} elseif ($method == 'speaker') {
-    list(, $id) = explode('/', $matches[2]);
-    $id = urldecode($id);
+} elseif ($method == 'speaker' and $speaker  = $params[0]) {
     $cmd = [
         'query' => array(
-            'match' => array('speaker' => $id),
+            'match' => array('speaker' => $speaker),
         ),
         'size' => 10000,
     ];
@@ -49,6 +52,19 @@ if ($method == 'meet') {
     $records = array();
     foreach ($obj->hits->hits as $hit) {
         $record = $hit->_source;
+        $records[] = $record;
+    }
+    echo json_encode($records, JSON_UNESCAPED_UNICODE);
+    exit;
+} elseif ($method == 'speaker' and count($params) == 0) {
+    $cmd = [
+        'size' => 10000,
+    ];
+    $obj = API::query('/person/_search', 'GET', json_encode($cmd));
+    $records = array();
+    foreach ($obj->hits->hits as $hit) {
+        $record = $hit->_source;
+        $record->extra = json_decode($record->extra);
         $records[] = $record;
     }
     echo json_encode($records, JSON_UNESCAPED_UNICODE);
