@@ -89,18 +89,53 @@ if ($method == 'meet') {
     }
     echo json_encode($records, JSON_UNESCAPED_UNICODE);
     exit;
-} elseif ($method == 'speaker' and count($params) == 0) {
+} elseif ($method == 'term' and count($params) == 2 and $params[1] == 'speaker') {
+
     $cmd = [
         'size' => 10000,
+        'query' => array(
+            'term' => array('term' => intval($params[0])),
+        ),
     ];
     $obj = API::query('/person/_search', 'GET', json_encode($cmd));
     $records = array();
     foreach ($obj->hits->hits as $hit) {
         $record = $hit->_source;
+        unset($record->term);
         $record->extra = json_decode($record->extra);
-        $records[] = $record;
+        $record->meet_count = 0;
+        $record->speech_count = 0;
+        $records[$record->name] = $record;
     }
-    echo json_encode($records, JSON_UNESCAPED_UNICODE);
+
+    $cmd = [
+        'query' => array(
+            'term' => array('term' => intval($params[0])),
+        ),
+        'aggs' => [
+            'speaker_agg' => [
+                'terms' => [
+                    'field' => 'speaker',
+                    'size' => 10000,
+                ],
+                'aggs' => [
+                    'meet_count' => [
+                        'cardinality' => ['field' => 'meet_id'],
+                    ],
+                ],
+            ],
+        ],
+        'size' => 0,
+    ];
+    $obj = API::query('/speech/_search', 'GET', json_encode($cmd));
+    foreach ($obj->aggregations->speaker_agg->buckets as $bucket) {
+        if (!array_key_exists($bucket->key, $records)) {
+            continue;
+        }
+        $records[$bucket->key]->speech_count = $bucket->doc_count;
+        $records[$bucket->key]->meet_count = $bucket->meet_count->value;
+    }
+    echo json_encode(array_values($records), JSON_UNESCAPED_UNICODE);
     exit;
 } else {
     readfile(__DIR__ . '/notfound.html');
