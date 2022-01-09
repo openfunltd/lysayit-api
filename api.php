@@ -12,6 +12,9 @@ if ($matches[2]) {
     $params = array_map('urldecode', explode('/', $matches[2]));
 }
 
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET');
+
 if ($method == 'meet') {
     $obj = API::query('/meet/_search?size=10000');
     $records = array();
