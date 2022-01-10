@@ -1,7 +1,8 @@
 <?php
 
 include(__DIR__ . '/init.inc.php');
-if (!preg_match('#/api/([^/]+)(.*)#', $_SERVER['REQUEST_URI'], $matches)) {
+$uri = explode('?', $_SERVER['REQUEST_URI'])[0];
+if (!preg_match('#/api/([^/]+)(.*)#', $uri, $matches)) {
     readfile(__DIR__ . '/notfound.html');
     exit;
 }
@@ -26,6 +27,45 @@ if ($method == 'meet') {
         $records[] = $record;
     }
     echo json_encode($records);
+    exit;
+} else if ($method == 'searchspeech') {
+    $page = max($_GET['page'], 1);
+    $cmd = [
+        'query' => array(
+            'query_string' => [
+                'query' => strval($_GET['q']),
+            ],
+        ),
+        'size' => 100,
+        'from' => 100 * $page - 100,
+    ];
+    $obj = API::query('/speech/_search', 'GET', json_encode($cmd));
+    $records = new StdClass;
+    $records->page = $page;
+    $records->total = $obj->hits->total;
+    $records->total_page = ceil($obj->hits->total / 100);
+    $records->speeches = [];
+    $records->meets = [];
+    $meets = array();
+    foreach ($obj->hits->hits as $hit) {
+        $record = $hit->_source;
+        $meets[$record->meet_id] = true;
+        $records->speeches[] = $record;
+    }
+    $cmd = [
+        'query' => array(
+            'ids' => array('values' => array_keys($meets)),
+        ),
+        'size' => 10000,
+    ];
+    $obj = API::query('/meet/_search', 'GET', json_encode($cmd));
+    foreach ($obj->hits->hits as $hit) {
+        $record = $hit->_source;
+        $record->id = $hit->_id;
+        $record->extra = json_decode($record->extra);
+        $records->meets[] = $record;
+    }
+    echo json_encode($records, JSON_UNESCAPED_UNICODE);
     exit;
 } else if ($method == 'speech' and $meet_id = $params[0]) {
     $cmd = [
