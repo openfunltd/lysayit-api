@@ -32,4 +32,17 @@ class LYLib
 
         return [$term, $period];
     }
+
+    /**
+     * getListFromTermPeriod 取得某屆次和會期的列表
+     */
+    public static function getListFromTermPeriod($term, $period)
+    {
+        $url = sprintf("https://data.ly.gov.tw/odw/usageFile.action?id=41&type=CSV&fname=41_%02d%02dCSV-1.csv", $term, $period);
+        error_log("fetching $url");
+        $curl = curl_init($url);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_USERAGENT, 'Chrome');
+        $content = curl_exec($curl);
+    }
 }
