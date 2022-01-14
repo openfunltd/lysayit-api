@@ -44,5 +44,6 @@ class LYLib
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_USERAGENT, 'Chrome');
         $content = curl_exec($curl);
+        return $content;
     }
 }
