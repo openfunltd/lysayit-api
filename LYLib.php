@@ -57,4 +57,53 @@ class LYLib
         $content = curl_exec($curl);
         return $content;
     }
+
+    public static function dbQuery($url, $method = 'GET', $data = null)
+    {
+        $curl = curl_init(getenv('SEARCH_URL') . $url);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        if ($method != 'GET') {
+            curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $method);
+            if (!is_null($data)) {
+                curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+            }
+        }
+        $content = curl_exec($curl);
+        curl_close($curl);
+        return $content;
+    }
+
+    public static $_db_bulk_pool = [];
+
+    public static function dbBulkCommit($mapping = null)
+    {
+        if (is_null($mapping)) {
+            $mappings = array_keys(self::$_db_bulk_pool);
+        } else {
+            $mappings = [$mapping];
+        }
+        foreach ($mappings as $mapping) {
+            $ret = self::dbQuery("/{$mapping}/_bulk", 'PUT', self::$_db_bulk_pool[$mapping]);
+            error_log(json_encode($ret));
+            self::$_db_bulk_pool[$mapping] = '';
+        }
+    }
+
+    public static function dbBulkInsert($mapping, $id, $data)
+    {
+        if (!array_key_exists($mapping, self::$_db_bulk_pool)) {
+            self::$_db_bulk_pool[$mapping] = '';
+        }
+        self::$_db_bulk_pool[$mapping] .=
+            json_encode(array(
+                'update' => array('_id' => $id),
+            )) . "\n"
+            . json_encode(array(
+                'doc' => $data,
+                'doc_as_upsert' => true,
+            )) . "\n";
+        if (strlen(self::$_db_bulk_pool[$mapping]) > 1000000) {
+            self::dbBulkCommit($mapping);
+        }
+    }
 }
