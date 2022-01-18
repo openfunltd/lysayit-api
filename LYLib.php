@@ -33,6 +33,17 @@ class LYLib
         return [$term, $period];
     }
 
+    public static function getPersonList()
+    {
+        $url = sprintf("https://data.ly.gov.tw/odw/usageFile.action?id=16&type=CSV&fname=16_CSV.csv");
+        error_log("fetching $url");
+        $curl = curl_init($url);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_USERAGENT, 'Chrome');
+        $content = curl_exec($curl);
+        return $content;
+    }
+
     /**
      * getListFromTermPeriod 取得某屆次和會期的列表
      */
