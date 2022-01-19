@@ -182,9 +182,27 @@ if ($method == 'meet') {
     $ret->total = $obj->hits->total;
     $ret->totalpage = ceil($ret->total / $ret->limit);
     $ret->records = [];
+    $meets = [];
     foreach ($obj->hits->hits as $hit) {
         $record = $hit->_source;
+        $meets[$record->meet_id] = true;
         $ret->records[] = $record;
+    }
+    $cmd = [
+        'query' => array(
+            'ids' => array('values' => array_keys($meets)),
+        ),
+        'size' => 10000,
+    ];
+    $obj = API::query('/meet/_search', 'GET', json_encode($cmd));
+    foreach ($obj->hits->hits as $hit) {
+        $meets[$hit->_id] = $hit->_source;
+    }
+    foreach ($ret->records as $idx => $record) {
+        $meet = $meets[$record->meet_id];
+        foreach ($meet as $k => $v) {
+            $ret->records[$idx]->{$k} = $v;
+        }
     }
     if (!array_key_exists('page', $_GET)) {
         $ret = $ret->records;
