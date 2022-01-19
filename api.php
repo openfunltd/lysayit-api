@@ -166,19 +166,30 @@ if ($method == 'meet') {
     exit;
 
 } elseif ($method == 'speaker' and $speaker  = $params[0]) {
+    $limit = @max(intval($_GET['limit']), 100);
+    $page = @max(intval($_GET['page']), 1);
     $cmd = [
         'query' => array(
             'match' => array('speaker' => $speaker),
         ),
-        'size' => 10000,
+        'size' => $limit,
+        'from' => $limit * $page - $limit,
     ];
     $obj = API::query('/speech/_search', 'GET', json_encode($cmd));
-    $records = array();
+    $ret = new StdClass;
+    $ret->page = $page;
+    $ret->limit = $limit;
+    $ret->total = $obj->hits->total;
+    $ret->totalpage = ceil($ret->total / $ret->limit);
+    $ret->records = [];
     foreach ($obj->hits->hits as $hit) {
         $record = $hit->_source;
-        $records[] = $record;
+        $ret->records[] = $record;
     }
-    json_output($records, JSON_UNESCAPED_UNICODE);
+    if (!array_key_exists('page', $_GET)) {
+        $ret = $ret->records;
+    }
+    json_output($ret, JSON_UNESCAPED_UNICODE);
     exit;
 } elseif ($method == 'term' and count($params) == 2 and $params[1] == 'speaker') {
 
