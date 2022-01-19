@@ -15,6 +15,10 @@ if ($matches[2]) {
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET');
+function json_output($obj) {
+    echo json_encode($obj, JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
 if ($method == 'meet') {
     $obj = API::query('/meet/_search?size=10000');
@@ -26,7 +30,7 @@ if ($method == 'meet') {
         $record->api_url = 'https://' . $_SERVER['HTTP_HOST'] . '/api/speech/' . $hit->_id;
         $records[] = $record;
     }
-    echo json_encode($records);
+    json_output($records);
     exit;
 } else if ($method == 'searchspeech') {
     $page = max($_GET['page'], 1);
@@ -65,7 +69,7 @@ if ($method == 'meet') {
         $record->extra = json_decode($record->extra);
         $records->meets[] = $record;
     }
-    echo json_encode($records, JSON_UNESCAPED_UNICODE);
+    json_output($records, JSON_UNESCAPED_UNICODE);
     exit;
 } else if ($method == 'speech' and $meet_id = $params[0]) {
     $cmd = [
@@ -82,7 +86,7 @@ if ($method == 'meet') {
         unset($record->meet_id);
         $records[] = $record;
     }
-    echo json_encode($records, JSON_UNESCAPED_UNICODE);
+    json_output($records, JSON_UNESCAPED_UNICODE);
     exit;
 } elseif ($method == 'speaker' and $speaker = $params[0] and 'meet' == $params[1]) {
     $cmd = [
@@ -114,7 +118,7 @@ if ($method == 'meet') {
         $record->extra = json_decode($record->extra);
         $records->meets[] = $record;
     }
-    echo json_encode($records, JSON_UNESCAPED_UNICODE);
+    json_output($records, JSON_UNESCAPED_UNICODE);
     exit;
 
 } elseif ($method == 'speaker' and $speaker  = $params[0]) {
@@ -130,7 +134,7 @@ if ($method == 'meet') {
         $record = $hit->_source;
         $records[] = $record;
     }
-    echo json_encode($records, JSON_UNESCAPED_UNICODE);
+    json_output($records, JSON_UNESCAPED_UNICODE);
     exit;
 } elseif ($method == 'term' and count($params) == 2 and $params[1] == 'speaker') {
 
@@ -178,7 +182,7 @@ if ($method == 'meet') {
         $records[$bucket->key]->speech_count = $bucket->doc_count;
         $records[$bucket->key]->meet_count = $bucket->meet_count->value;
     }
-    echo json_encode(array_values($records), JSON_UNESCAPED_UNICODE);
+    json_output(array_values($records), JSON_UNESCAPED_UNICODE);
     exit;
 } else {
     readfile(__DIR__ . '/notfound.html');
