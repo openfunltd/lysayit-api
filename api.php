@@ -24,9 +24,37 @@ if ($method == 'meet') {
     $page = @max($_GET['page'], 1);
     $limit = @intval($_GET['limit']) ?: 100;
     $cmd = [
+        'query' => [
+            'bool' => [
+                'must' => [],
+                'filter' => [],
+            ],
+        ],
         'size' => $limit,
         'from' => $limit * $page - $limit,
     ];
+    if (array_key_exists('term', $_GET)) {
+        $cmd['query']['bool']['filter'][] = ['range' => ['term' => [
+            'gte' => intval($_GET['term']),
+            'lte' => intval($_GET['term']),
+        ]]];
+    }
+    if (array_key_exists('sessionPeriod', $_GET)) {
+        $cmd['query']['bool']['filter'][] = ['range' => ['sessionPeriod' => [
+            'gte' => intval($_GET['sessionPeriod']),
+            'lte' => intval($_GET['sessionPeriod']),
+        ]]];
+    }
+    if (array_key_exists('dateStart', $_GET)) {
+        $cmd['query']['bool']['filter'][] = ['range' => ['date' => [
+            'gte' => intval($_GET['dateStart']),
+        ]]];
+    }
+    if (array_key_exists('dateEnd', $_GET)) {
+        $cmd['query']['bool']['filter'][] = ['range' => ['date' => [
+            'lte' => intval($_GET['dateEnd']),
+        ]]];
+    }
     $obj = API::query('/meet/_search', 'GET', json_encode($cmd));
 
     $records = array();
