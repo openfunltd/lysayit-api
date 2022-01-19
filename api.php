@@ -21,8 +21,20 @@ function json_output($obj) {
 }
 
 if ($method == 'meet') {
-    $obj = API::query('/meet/_search?size=10000');
+    $page = @max($_GET['page'], 1);
+    $limit = @intval($_GET['limit']) ?: 100;
+    $cmd = [
+        'size' => $limit,
+        'from' => $limit * $page - $limit,
+    ];
+    $obj = API::query('/meet/_search', 'GET', json_encode($cmd));
+
     $records = array();
+    $ret = new StdClass;
+    $ret->total = $obj->hits->total;
+    $ret->limit = $limit;
+    $ret->totalpage = ceil($ret->total / $ret->limit);
+    $ret->page = $page;
     foreach ($obj->hits->hits as $hit) {
         $record = $hit->_source;
         $record->id = $hit->_id;
@@ -30,7 +42,11 @@ if ($method == 'meet') {
         $record->api_url = 'https://' . $_SERVER['HTTP_HOST'] . '/api/speech/' . $hit->_id;
         $records[] = $record;
     }
-    json_output($records);
+    $ret->data = $records;
+    if (!array_key_exists('page', $_GET)) {
+        $ret = $ret->data;
+    }
+    json_output($ret);
     exit;
 } else if ($method == 'searchspeech') {
     $page = max($_GET['page'], 1);
