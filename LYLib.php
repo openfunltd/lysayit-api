@@ -106,4 +106,79 @@ class LYLib
             self::dbBulkCommit($mapping);
         }
     }
+
+    public static function parseDoc($file)
+    {
+        $basename = basename($file);
+        if (file_exists(__DIR__ . "/htmlfile/{$basename}")) {
+            return json_decode(file_get_contents(__DIR__ . "/htmlfile/{$basename}"))->pics;
+        }
+        error_log("parse doc {$file}");
+        $cmd = sprintf("curl -X POST -F %s -F \"output_type=html\" https://demo.sheethub.net/soffice/index.php", escapeshellarg('file=@' . $file));
+        $content = (`$cmd`);
+        $ret = json_decode($content);
+        if (!$ret) {
+            echo $content;
+            exit;
+        }
+        $base = basename($file);
+
+        $images = new StdClass;
+        foreach ($ret->attachments as $attachment) {
+            $img_name = explode('_html_', $attachment->file_name)[1];
+            file_put_contents(__DIR__ . '/picfile/' . $base . '-' . $img_name, base64_decode($attachment->content));
+            S3Lib::put(__DIR__ . "/picfile/{$basename}-{$img_name}", "data/picfile/{$basename}-{$img_name}");
+            unlink(__DIR__ . "/picfile/{$basename}-{$img_name}");
+
+            $images->{$img_name} = true;
+        }
+        unset($ret->attachments);
+        $content = base64_decode($ret->content);
+        preg_match_all('#<img src="([^"]+)"[^>]*"#', $content, $matches);
+
+        $pics = [];
+        foreach ($matches[1] as $idx => $file_name) {
+            $img_name = explode('_html_', $file_name)[1];
+            if (!preg_match('/width="(\d+)" height="(\d+)"/', $matches[0][$idx], $matches2)) {
+            }
+            $pics[] = [$img_name, $matches2[1], $matches2[2], $idx];
+        }
+        $ret->pics = $pics;
+        file_put_contents(__DIR__ . "/htmlfile/{$basename}", json_encode($ret));
+        return $pics;
+    }
+
+    public static function parseTxtFile($basename)
+    {
+        $docfile = __DIR__ . "/docfile/{$basename}";
+        if (!file_exists("txtfile/" . $basename) or filesize("txtfile/{$basename}") == 0) {
+            system(sprintf("antiword %s > %s", escapeshellarg($docfile), escapeshellarg("txtfile/{$basename}")));
+        }
+
+        if (file_exists("txtfile/" . $basename)) {
+            // 檢查是否有圖片，有的話就解出來轉檔
+            $cmd = sprintf("grep --quiet %s %s", escapeshellarg('\[pic\]'), escapeshellarg('txtfile/' . $basename));
+            system($cmd, $ret);
+            if ($ret) {
+                return;
+            }
+            $pics = LYLib::parseDoc($docfile);
+            $content = file_get_contents(__DIR__ . "/txtfile/{$basename}");
+            $uploading_pics = [];
+            $content = preg_replace_callback('/\[pic\]/', function($matches) use (&$pics, $basename, &$uploading_pics) {
+                if (!$pics) {
+                    print_r($pics);
+                    throw new Exception("圖片數量不正確: {$basename}");
+                }
+                $pic = array_shift($pics);
+                if ($pic[2] < 10) {
+                    return '==========';
+                }
+                $uploading_pics[$pic[0]] = true;
+                return "[pic:https://twlydata.s3.amazonaws.com/data/picfile/{$basename}-{$pic[0]}]";
+            }, $content);
+
+            file_put_contents(__DIR__ . "/txtfile/{$basename}", $content);
+        }
+    }
 }
