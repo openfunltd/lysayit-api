@@ -1,8 +1,10 @@
 <?php
 
+ini_set('memory_limit', '2G');
 include(__DIR__ . '/LYLib.php');
 include(__DIR__ . '/config.php');
 include(__DIR__ . '/Parser.php');
+include(__DIR__ . '/S3Lib.php');
 
 error_log("抓取歷屆委員名單");
 
@@ -66,15 +68,13 @@ foreach ($list_files as $file) {
     }
 }
 
-// doc 轉成 txt
-foreach (glob("docfile/*.doc") as $f) {
-    $basename = basename($f);
-    if (!file_exists("txtfile/" . $basename) or filesize("txtfile/{$basename}") == 0) {
-        system(sprintf("antiword %s > %s", escapeshellarg($f), escapeshellarg("txtfile/{$basename}")));
-    }
-}
-
 foreach ($meet_info as $meet_id => $meet_data) {
+    try {
+        LYLib::parseTxtFile($meet_id . ".doc");
+    } catch (Exception $e) {
+        readline("$meet_id error " . $e->getMessage());
+        continue;
+    }
     $file = __DIR__ . "/txtfile/{$meet_id}.doc";
     if (!file_exists($file)) {
         continue;
