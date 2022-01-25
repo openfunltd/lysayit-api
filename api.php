@@ -20,7 +20,71 @@ function json_output($obj) {
     exit;
 }
 
-if ($method == 'meet') {
+if ($method == 'stat') {
+    $cmd = [
+        'query' => [
+            'range' => ['date' => ['gte' => 19700001]],
+        ],
+        'aggs' => [
+            'term_count' => [
+                'terms' => ['field' => 'term'],
+                'aggs' => [
+                    'date_max' => ['max' => ['field' => 'date']],
+                    'date_min' => ['min' => ['field' => 'date']],
+                ],
+            ],
+            'date_max' => ['max' => ['field' => 'date']],
+            'date_min' => ['min' => ['field' => 'date']],
+        ],
+        'size' => 0,
+    ];
+    $obj = API::query('/meet/_search', 'GET', json_encode($cmd));
+    $ret = new StdClass;
+    $ret->meet_total = $obj->hits->total;
+    $ret->date_min = $obj->aggregations->date_min->value;
+    $ret->date_max = $obj->aggregations->date_max->value;
+    $ret->terms = [];
+
+    foreach ($obj->aggregations->term_count->buckets as $bucket) {
+        if (!array_key_exists($bucket->key, $ret->terms)) {
+            $ret->terms[$bucket->key] = new StdClass;;
+            $ret->terms[$bucket->key]->term = $bucket->key;
+        }
+        $ret->terms[$bucket->key]->date_min = $bucket->date_min->value;
+        $ret->terms[$bucket->key]->date_max = $bucket->date_max->value;
+        $ret->terms[$bucket->key]->meet_count = $bucket->doc_count;
+    }
+
+    $cmd = [
+        'aggs' => [
+            'term_agg' => [
+                'terms' => ['field' => 'term'],
+                'aggs' => [
+                    'speaker_count' => [
+                        'cardinality' => ['field' => 'speaker'],
+                    ]
+                ],
+            ],
+        ],
+        'size' => 0,
+    ];
+    $obj = API::query('/speech/_search', 'GET', json_encode($cmd));
+    $ret->speech_count = $obj->hits->total;
+    foreach ($obj->aggregations->term_agg->buckets as $bucket) {
+        if (!array_key_exists($bucket->key, $ret->terms)) {
+            $ret->terms[$bucket->key] = new StdClass;;
+            $ret->terms[$bucket->key]->term = $bucket->key;
+        }
+        $ret->terms[$bucket->key]->speaker_count = $bucket->speaker_count->value;
+        $ret->terms[$bucket->key]->speach_count = $bucket->doc_count;
+    }
+
+    ksort($ret->terms);
+    $ret->terms = array_values($ret->terms);
+
+    json_output($ret, JSON_UNESCAPED_UNICODE);
+    exit;
+} elseif ($method == 'meet') {
     $page = @max($_GET['page'], 1);
     $limit = @intval($_GET['limit']) ?: 100;
     $cmd = [
