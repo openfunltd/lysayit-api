@@ -225,9 +225,22 @@ if ($method == 'stat') {
     foreach ($obj->hits->hits as $hit) {
         $record = $hit->_source;
         unset($record->meet_id);
-        $records[] = $record;
+        $records[$record->lineno] = $record;
     }
-    json_output($records, JSON_UNESCAPED_UNICODE);
+
+    $cmd = [
+        'query' => array(
+            'match' => array('meet_id' => $meet_id),
+        ),
+        'size' => 10000,
+    ];
+    $obj = API::query('/vote/_search', 'GET', json_encode($cmd));
+    foreach ($obj->hits->hits as $hit) {
+        $record = $hit->_source;
+        $records[$record->line_no]->vote_data = $record;
+    }
+
+    json_output(array_values($records), JSON_UNESCAPED_UNICODE);
     exit;
 } elseif ($method == 'speaker' and $speaker = $params[0] and 'meet' == $params[1]) {
     $cmd = [
