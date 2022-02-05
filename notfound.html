@@ -38,6 +38,14 @@
         </ul>
     </li>
     <li>
+        /api/vote/{name} 列出 name 的所有投票記錄
+        <ul>
+            <li>參數 limit: 指定要回傳多少筆，預設 100 筆</li>
+            <li>參數 page: 要會傳第幾頁，預設第 1 頁，沒指定 page 的話回傳內容不包含筆數和分頁資訊（為了與舊程式相容）</li>
+            <li>Ex: /api/vote/黃國昌 列出黃國昌所有的對話記錄</li>
+        </ul>
+    </li>
+    <li>
         /api/searchspeech?q={keyword}&page={page} 列出包含 keyword 的對話記錄
         <ul>
             <li>一次搜尋 100 筆，可以用 {page} 換頁</li>

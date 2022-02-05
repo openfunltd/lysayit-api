@@ -289,6 +289,53 @@ if ($method == 'stat') {
     }
     json_output($ret, JSON_UNESCAPED_UNICODE);
     exit;
+} elseif ($method == 'vote' and $speaker  = $params[0]) {
+    $limit = @max(intval($_GET['limit']), 100);
+    $page = @max(intval($_GET['page']), 1);
+    $cmd = [
+        'query' => array(
+            'multi_match' => array(
+                'query' => $speaker,
+                'fields' => ['贊成', '反對', '棄權'],
+            ),
+        ),
+        'size' => $limit,
+        'from' => $limit * $page - $limit,
+    ];
+    $obj = API::query('/vote/_search', 'GET', json_encode($cmd));
+    $ret = new StdClass;
+    $ret->page = $page;
+    $ret->limit = $limit;
+    $ret->total = $obj->hits->total;
+    $ret->totalpage = ceil($ret->total / $ret->limit);
+    $ret->records = [];
+    $meets = [];
+    foreach ($obj->hits->hits as $hit) {
+        $record = $hit->_source;
+        $meets[$record->meet_id] = true;
+        $ret->records[] = $record;
+    }
+    $cmd = [
+        'query' => array(
+            'ids' => array('values' => array_keys($meets)),
+        ),
+        'size' => 10000,
+    ];
+    $obj = API::query('/meet/_search', 'GET', json_encode($cmd));
+    foreach ($obj->hits->hits as $hit) {
+        $meets[$hit->_id] = $hit->_source;
+    }
+    foreach ($ret->records as $idx => $record) {
+        $meet = $meets[$record->meet_id];
+        foreach ($meet as $k => $v) {
+            if (property_exists($ret->records[$idx], $k)) {
+                $k = 'meet_' . $k;
+            }
+            $ret->records[$idx]->{$k} = $v;
+        }
+    }
+    json_output($ret, JSON_UNESCAPED_UNICODE);
+    exit;
 } elseif ($method == 'term' and count($params) == 2 and $params[1] == 'speaker') {
 
     $cmd = [
