@@ -2,3 +2,5 @@ config.php
 list/
 docfile
 txtfile
+htmlfile
+picfile
