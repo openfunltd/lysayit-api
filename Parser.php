@@ -2,6 +2,67 @@
 
 class Parser
 {
+    public static $_name_list = null;
+
+    public static function getNameList()
+    {
+        if (!is_null(self::$_name_list)) {
+            return self::$_name_list;
+        }
+        $fp = fopen('php://temp', 'rw');
+        fputs($fp, LYLib::getPersonList());
+        fseek($fp, 0, SEEK_SET);
+        $columns = fgetcsv($fp);
+        $columns[0] = 'term';
+
+        $name_list = [];
+        while ($rows = fgetcsv($fp)) {
+            $values = array_combine($columns, $rows);
+            if (!array_key_exists($values['name'], $name_list)) {
+                $name_list[$values['name']] = [
+                    'terms' => [],
+                    'name' => $values['name'],
+                ];
+            }
+            $name_list[$values['name']]['terms'][] = $values['term'];
+        }
+        return self::$_name_list = $name_list;
+    }
+
+    public static function parsePeople($str)
+    {
+        $str = str_replace('　', '', $str);
+        $str = str_replace("\r", '', $str);
+        $str = str_replace("\n", '', $str);
+        $str = str_replace(' ', '', $str);
+        $str = str_replace('‧', '', $str);
+        $str = str_replace('．', '', $str);
+        $str = str_replace('&nbsp;', '', $str);
+        $hit = [];
+        $names = self::getNameList();
+
+        while (strlen($str)) {
+            foreach ($names as $n => $nn) {
+                if (strpos($n, '.') !== false) {
+                    if (preg_match("#^{$n}(.*)$#u", $str, $matches)) {
+                        $str = $matches[1];
+                        $hit[] = $nn['name'];
+                        continue 2;
+                    }
+                } else {
+                    if (strpos($str, $n) === 0) {
+                        $str = substr($str, strlen($n));
+                        $hit[] = $nn['name'];
+                        continue 2;
+                    }
+                }
+            }
+            $skip .= mb_substr($str, 0, 1, 'UTF-8');
+            $str = mb_substr($str, 1, 0, 'UTF-8');
+        }
+        return $hit;
+    }
+
     public static function matchFirstLine($line)
     {
         if (in_array(str_replace('　', '', trim($line)), array('報告事項', '討論事項'))) {
@@ -15,6 +76,56 @@ class Parser
             return ['(一)', $matches[1]];
         }
         return false;
+    }
+
+    public static function parseVote($ret)
+    {
+        $ret->votes = [];
+        foreach ($ret->blocks as $idx => $block) {
+            while ($line = array_shift($block)) {
+                if (trim($line) === '表決結果名單：') {
+                    $vote = new StdClass;
+                    $vote->line_no = $ret->block_lines[$idx];
+                    $prev_key = null;
+                    while ($line = array_shift($block)) {
+                        if (preg_match('#^會議名稱：(.*)\s+表決型態：(.*)$#u', trim($line), $matches)) {
+                            $vote->{'會議名稱'} = trim($matches[1]);
+                            $vote->{'表決型態'} = $matches[2];
+                        } else if (preg_match('#^(表決時間|表決議題)：(.*)#u', trim($line), $matches)) {
+                            $prev_key = $matches[1];
+                            $vote->{$matches[1]} = trim($matches[2]);
+                        } else if (preg_match('#^表決結果：出席人數：(\d+)\s*贊成人數：(\d+)\s*反對人數：(\d+)\s*棄權人數：(\d+)#u', trim($line), $matches)) {
+                            $vote->{'表決結果'} = [
+                                '出席人數' => intval($matches[1]),
+                                '贊成人數' => intval($matches[2]),
+                                '反對人數' => intval($matches[3]),
+                                '棄權人數' => intval($matches[4]),
+                            ];
+                            $prev_key = '表決結果';
+                        } elseif ($prev_key == '表決議題' and strpos($line, '：') === false) {
+                            $vote->{$prev_key} .= trim($line);
+                        } elseif (preg_match('#^(贊成|反對|棄權)：$#u', trim($line), $matches)) {
+                            $prev_key = null;
+                            $content = '';
+                            while (count($block) and (strpos($block[0], '：') === false)) {
+                                $content .= str_replace(' ', '', array_shift($block));
+                            }
+                            $vote->{$matches[1]} = self::parsePeople($content);
+                            if ($matches[1] == '棄權') {
+                                break;
+                            }
+                        } else {
+                            var_dump($vote);
+                            var_dump($line);
+                            continue 2;
+                            exit;
+                        }
+                    }
+                    $ret->votes[] = $vote;
+                }
+            }
+        }
+        return $ret;
     }
 
     public static function parse($content)
@@ -129,6 +240,6 @@ class Parser
         }
         array_shift($ret->blocks);
         array_shift($ret->block_lines);
-        return $ret;
+        return self::parseVote($ret);
     }
 }
