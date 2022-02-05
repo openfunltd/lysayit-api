@@ -70,6 +70,11 @@ if ($method == 'stat') {
         $ret->terms[$bucket->key]->date_max = $bucket->date_max->value;
         $ret->terms[$bucket->key]->meet_count = $bucket->doc_count;
     }
+    $cmd = [
+        'size' => 0,
+    ];
+    $obj = API::query('/vote/_search', 'GET', json_encode($cmd));
+    $ret->vote_count = $obj->hits->total;
 
     $cmd = [
         'aggs' => [
