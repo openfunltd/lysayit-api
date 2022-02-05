@@ -35,12 +35,16 @@ class LYLib
 
     public static function getPersonList()
     {
+        if (file_exists(__DIR__ . '/person.csv')) {
+            return file_get_contents(__DIR__ . '/person.csv');
+        }
         $url = sprintf("https://data.ly.gov.tw/odw/usageFile.action?id=16&type=CSV&fname=16_CSV.csv");
         error_log("fetching $url");
         $curl = curl_init($url);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_USERAGENT, 'Chrome');
         $content = curl_exec($curl);
+        file_put_contents(__DIR__ . '/person.csv', $content);
         return $content;
     }
 
