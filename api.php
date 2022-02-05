@@ -71,10 +71,22 @@ if ($method == 'stat') {
         $ret->terms[$bucket->key]->meet_count = $bucket->doc_count;
     }
     $cmd = [
+        'aggs' => [
+            'term_agg' => [
+                'terms' => ['field' => 'term'],
+            ],
+        ],
         'size' => 0,
     ];
     $obj = API::query('/vote/_search', 'GET', json_encode($cmd));
     $ret->vote_count = $obj->hits->total;
+    foreach ($obj->aggregations->term_agg->buckets as $bucket) {
+        if (!array_key_exists($bucket->key, $ret->terms)) {
+            $ret->terms[$bucket->key] = new StdClass;;
+            $ret->terms[$bucket->key]->term = $bucket->key;
+        }
+        $ret->terms[$bucket->key]->vote_count = $bucket->doc_count;
+    }
 
     $cmd = [
         'aggs' => [
