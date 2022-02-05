@@ -128,6 +128,7 @@ class Parser
             }
         }
         array_shift($ret->blocks);
+        array_shift($ret->block_lines);
         return $ret;
     }
 }
