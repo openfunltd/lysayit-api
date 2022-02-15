@@ -80,6 +80,22 @@ foreach ($meet_info as $meet_id => $meet_data) {
         continue;
     }
     $info = Parser::parse(file_get_contents($file));
+    foreach ($info->votes as $vote) {
+        $vote_id = "{$meet_id}-{$vote->line_no}";
+        $data = [
+            'meet_id' => $meet_id,
+            'term' => $meet_data['term'],
+            'line_no' => $vote->line_no,
+        ];
+        foreach (['贊成', '反對', '棄權'] as $c) {
+            $data[$c] = $vote->{$c};
+            unset($vote->{$c});
+        }
+        unset($vote->line_no);
+        $data['extra'] = json_encode($vote, JSON_UNESCAPED_UNICODE);
+
+        LYLib::dbBulkInsert('vote', $vote_id, $data);
+    }
     if (!property_exists($info, 'title') or !strpos($info->title, '會議紀錄')) {
         continue;
     }
