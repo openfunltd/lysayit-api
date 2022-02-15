@@ -235,12 +235,35 @@ if ($method == 'stat') {
         'size' => 10000,
     ];
     $obj = API::query('/vote/_search', 'GET', json_encode($cmd));
+    $speakers = [];
     foreach ($obj->hits->hits as $hit) {
         $record = $hit->_source;
+        $speakers[$record->speaker] = true;
         $records[$record->line_no]->vote_data = $record;
     }
 
-    json_output(array_values($records), JSON_UNESCAPED_UNICODE);
+    if (array_key_exists('full', $_GET) and $_GET['full']) {
+        $ret = new StdClass;
+        $ret->speech = array_values($records);
+        $obj = API::query('/meet/' . $meet_id, 'GET');
+        if ($obj->found) {
+            $ret->info = $obj->_source;
+            $ret->info->extra = json_decode($ret->info->extra);
+        }
+        $cmd = [
+            'query' => array(
+                'ids' => array('values' => array_keys($speakers)),
+            ),
+            'size' => 10000,
+        ];
+    $obj = API::query('/meet/_search', 'GET', json_encode($cmd));
+
+        $records = $ret;
+    } else {
+        $records = array_values($records);
+    }
+
+    json_output($records, JSON_UNESCAPED_UNICODE);
     exit;
 } elseif ($method == 'speaker' and $speaker = $params[0] and 'meet' == $params[1]) {
     $cmd = [
