@@ -88,7 +88,19 @@ class LYLib
         }
         foreach ($mappings as $mapping) {
             $ret = self::dbQuery("/{$mapping}/_bulk", 'PUT', self::$_db_bulk_pool[$mapping]);
-            error_log(json_encode($ret));
+            $ids = [];
+            foreach (json_decode($ret)->items as $command) {
+                foreach ($command as $action => $result) {
+                    if ($result->status == 200) {
+                        $ids[] = $result->_id;
+                        continue;
+                    }
+                    print_r($result);
+                    exit;
+                }
+            }
+
+            error_log(sprintf("bulk commit, update (%d) %s", count($ids), mb_strimwidth(implode(',', $ids), 0, 200)));
             self::$_db_bulk_pool[$mapping] = '';
         }
     }
