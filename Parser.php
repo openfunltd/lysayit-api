@@ -146,6 +146,24 @@ class Parser
             $line = str_replace('　', '  ', $line);
             $line = trim($line, "\n");
 
+            if (trim($line) == '') {
+                continue;
+            }
+
+            // 處理開頭是「國是論壇」
+            if (!count($blocks) and $line == '國是論壇') {
+                $current_block[] = $line;
+                while (count($lines)) {
+                    if (strpos($lines[0], '：')) {
+                        break;
+                    }
+                    $idx ++;
+                    $line = array_shift($lines);
+                    $current_block[] = $line;
+                }
+                continue;
+            }
+
             if (strpos($line, '|') === 0) {
                 $current_block[] = $line;
                 continue;
@@ -206,7 +224,10 @@ class Parser
                 continue;
             }
             if (trim($line) == '委員會紀錄') {
-                $ret->type = $line;
+                $ret->type = trim($line);
+                continue;
+            } else if (trim($line) == '國是論壇') {
+                $ret->type = $ret->title = trim($line);
                 continue;
             }
             if (strpos($line, '立法院第') === 0) {

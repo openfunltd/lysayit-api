@@ -96,7 +96,7 @@ foreach ($meet_info as $meet_id => $meet_data) {
 
         LYLib::dbBulkInsert('vote', $vote_id, $data);
     }
-    if (!property_exists($info, 'title') or !strpos($info->title, '會議紀錄')) {
+    if (!property_exists($info, 'title') or ($info->title != '國是論壇' and !strpos($info->title, '會議紀錄'))) {
         continue;
     }
     if (!intval($meet_data['meetingDate']) and preg_match('/中華民國(\d+)年(\d+)月(\d+)日/', $info->{'時間'}, $matches)) {
