@@ -57,7 +57,6 @@ class Parser
                     }
                 }
             }
-            $skip .= mb_substr($str, 0, 1, 'UTF-8');
             $str = mb_substr($str, 1, 0, 'UTF-8');
         }
         return $hit;
