@@ -127,6 +127,7 @@ if ($method == 'stat') {
                 'filter' => [],
             ],
         ],
+        'sort' => ['date' => 'desc'],
         'size' => $limit,
         'from' => $limit * $page - $limit,
     ];
