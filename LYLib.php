@@ -91,7 +91,7 @@ class LYLib
             $ids = [];
             foreach (json_decode($ret)->items as $command) {
                 foreach ($command as $action => $result) {
-                    if ($result->status == 200) {
+                    if ($result->status == 200 or $result->status == 201) {
                         $ids[] = $result->_id;
                         continue;
                     }
