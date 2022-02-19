@@ -372,6 +372,7 @@ if ($method == 'stat') {
                 'fields' => ['贊成', '反對', '棄權'],
             ),
         ),
+        'sort' => ['date' => 'desc'],
         'size' => $limit,
         'from' => $limit * $page - $limit,
     ];
@@ -386,6 +387,7 @@ if ($method == 'stat') {
     foreach ($obj->hits->hits as $hit) {
         $record = $hit->_source;
         $meets[$record->meet_id] = true;
+        $record->extra = json_decode($record->extra);
         $ret->records[] = $record;
     }
     $cmd = [
@@ -401,6 +403,9 @@ if ($method == 'stat') {
     foreach ($ret->records as $idx => $record) {
         $meet = $meets[$record->meet_id];
         foreach ($meet as $k => $v) {
+            if ($k == 'extra') {
+                $v = json_decode($v);
+            }
             if (property_exists($ret->records[$idx], $k)) {
                 $k = 'meet_' . $k;
             }
