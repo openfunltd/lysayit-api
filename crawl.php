@@ -44,6 +44,10 @@ error_log("抓取 DOC 檔");
 foreach ($list_files as $file) {
     $fp = fopen($file, 'r');
     $columns = fgetcsv($fp);
+    if (strpos($columns[0], 'comYear') === false) {
+        error_log("skip {$file}");
+        continue;
+    }
     $columns[0] = 'comYear';
     $docfull = array();
     while ($rows = fgetcsv($fp)) {
