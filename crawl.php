@@ -133,7 +133,9 @@ foreach ($meet_info as $meet_id => $meet_data) {
         }
         if ($meet_info->{$prev_meet_id}['meetingDate'] == $meet_info->{$meet_id}['meetingDate']) {
             $info->title = $prev_info->title;
-            $info->{'時間'} = $prev_info->{'時間'};
+            if (property_exists($prev_info, '時間')) {
+                $info->{'時間'} = $prev_info->{'時間'};
+            }
         } else {
             print_r(json_encode($meet_info->{$prev_meet_id}, JSON_UNESCAPED_UNICODE));
             echo "\n";
