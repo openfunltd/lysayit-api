@@ -38,6 +38,7 @@ for ($ym = time(); $ym > time() - 86400 * 365; $ym = strtotime('-1 month', $ym))
 }
 
 $meet_info = new StdClass;
+$meet_titles = new StdClass;
 
 error_log("抓取 DOC 檔");
 // 抓取沒有的 doc 檔
@@ -54,7 +55,13 @@ foreach ($list_files as $file) {
         $values = array_map('trim', array_combine($columns, $rows));
         unset($values['']);
         $docfilename = basename($values['docUrl']);
-        $meet_info->{str_replace('.doc', '', $docfilename)} = $values;
+        $meet_id = str_replace('.doc', '', $docfilename);
+        if (!property_exists($meet_info, $meet_id)) {
+            $values['subject'] = [$values['subject']];
+            $meet_info->{$meet_id} = $values;
+        } else {
+            $meet_info->{$meet_id}['subject'][] = $values['subject'];
+        }
         if (!array_key_Exists($docfilename, $docfull)) {
             $docfull[$docfilename] = $values['docUrl'];
         } else if ($docfull[$docfilename] != $values['docUrl']) {
@@ -72,6 +79,8 @@ foreach ($list_files as $file) {
     }
 }
 
+$prev_meet_id = null;
+$prev_info = null;
 foreach ($meet_info as $meet_id => $meet_data) {
     try {
         LYLib::parseTxtFile($meet_id . ".doc");
@@ -100,8 +109,38 @@ foreach ($meet_info as $meet_id => $meet_data) {
 
         LYLib::dbBulkInsert('vote', $vote_id, $data);
     }
-    if (!property_exists($info, 'title') or ($info->title != '國是論壇' and !strpos($info->title, '會議紀錄'))) {
-        continue;
+    if (!property_exists($info, 'title') or ($info->title != '國是論壇' and !strpos($info->title, '會議紀錄') and !strpos($info->title, '公聽會紀錄'))) {
+        if (!property_exists($meet_info, $prev_meet_id)) {
+            throw new Exception("{$prev_meet_id} not found");
+        }
+        if (!property_exists($meet_info, $meet_id)) {
+            throw new Exception("{$meet_id} not found");
+        }
+        if (strpos($meet_info->{$meet_id}['subject'][0], '索引')) {
+            continue;
+        }
+        if (strpos($meet_info->{$meet_id}['subject'][0], '質詢事項') !== false) {
+            continue;
+        }
+        if (strpos($meet_info->{$meet_id}['subject'][0], '議事錄') !== false) {
+            continue;
+        }
+        if (strpos($meet_info->{$meet_id}['subject'][0], '行政院答復部分') !== false) {
+            continue;
+        }
+        if (strpos($meet_info->{$meet_id}['subject'][0], '委員質詢部分') !== false) {
+            continue;
+        }
+        if ($meet_info->{$prev_meet_id}['meetingDate'] == $meet_info->{$meet_id}['meetingDate']) {
+            $info->title = $prev_info->title;
+            $info->{'時間'} = $prev_info->{'時間'};
+        } else {
+            print_r(json_encode($meet_info->{$prev_meet_id}, JSON_UNESCAPED_UNICODE));
+            echo "\n";
+            print_r(json_encode($meet_info->{$meet_id}, JSON_UNESCAPED_UNICODE));
+            continue;
+            exit;
+        }
     }
     if (!intval($meet_data['meetingDate']) and preg_match('/中華民國(\d+)年(\d+)月(\d+)日/', $info->{'時間'}, $matches)) {
         $meet_data['meetingDate'] = sprintf("%03d%02d%02d", $matches[1], $matches[2], $matches[3]);
@@ -145,5 +184,7 @@ foreach ($meet_info as $meet_id => $meet_data) {
         ];
         LYLib::dbBulkInsert('speech', "{$meet_id}-{$lineno}", $data);
     }
+    $prev_meet_id = $meet_id;
+    $prev_info = $info;
 }
 LYLib::dbBulkCommit();
