@@ -47,6 +47,13 @@ if ($method == 'stat') {
                 'aggs' => [
                     'date_max' => ['max' => ['field' => 'date']],
                     'date_min' => ['min' => ['field' => 'date']],
+                    'period_count' => [
+                        'terms' => ['field' => 'sessionPeriod'],
+                        'aggs' => [
+                            'date_max' => ['max' => ['field' => 'date']],
+                            'date_min' => ['min' => ['field' => 'date']],
+                        ],
+                    ],
                 ],
             ],
             'date_max' => ['max' => ['field' => 'date']],
@@ -65,7 +72,19 @@ if ($method == 'stat') {
         if (!array_key_exists($bucket->key, $ret->terms)) {
             $ret->terms[$bucket->key] = new StdClass;;
             $ret->terms[$bucket->key]->term = $bucket->key;
+            $ret->terms[$bucket->key]->periods = [];
         }
+        foreach ($bucket->period_count->buckets as $pbucket) {
+            if (!array_key_exists($pbucket->key, $ret->terms[$bucket->key]->periods)) {
+                $ret->terms[$bucket->key]->periods[$pbucket->key] = new StdClass;
+                $ret->terms[$bucket->key]->periods[$pbucket->key]->period = $pbucket->key;
+            }
+            $ret->terms[$bucket->key]->periods[$pbucket->key]->date_min = $pbucket->date_min->value;
+            $ret->terms[$bucket->key]->periods[$pbucket->key]->date_max = $pbucket->date_max->value;
+            $ret->terms[$bucket->key]->periods[$pbucket->key]->meet_count = $pbucket->doc_count;
+        }
+        ksort($ret->terms[$bucket->key]->periods);
+        $ret->terms[$bucket->key]->periods = array_values($ret->terms[$bucket->key]->periods);
         $ret->terms[$bucket->key]->date_min = $bucket->date_min->value;
         $ret->terms[$bucket->key]->date_max = $bucket->date_max->value;
         $ret->terms[$bucket->key]->meet_count = $bucket->doc_count;
