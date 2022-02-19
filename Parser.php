@@ -191,6 +191,13 @@ class Parser
                 continue;
             }
             if (!preg_match('#^([^　 ：]+)：(.+)#u', $line, $matches)) {
+                if (!count($blocks) and (strpos($line, '（續接') === 0 or strpos($line, '（上接') === 0 or strpos($line, '[pic') === 0)) {
+                    $blocks[] = $current_block;
+                    $block_lines[] = $current_line;
+                    $current_line = $idx;
+                    $current_block = ['段落：' . $line];
+                    continue;
+                }
                 $current_block[] = $line;
                 continue;
             }
