@@ -290,32 +290,73 @@ if ($method == 'stat') {
         'query' => array(
             'term' => array('speaker' => $speaker),
         ),
-        'size' => 10000,
+        'aggs' => [
+            'term_agg' => [
+                'terms' => [
+                    'field' => 'meet_id',
+                    'size' => 10000,
+                ],
+            ],
+        ],
+        'size' => 0,
     ];
     $obj = API::query('/speech/_search', 'GET', json_encode($cmd));
-    $meets = [];
-    $records = new StdClass;
-    $records->speeches = [];
-    foreach ($obj->hits->hits as $hit) {
-        $record = $hit->_source;
-        $meets[$record->meet_id] = true;
-        $records->speeches[] = $record;
-    }
+    $meet_ids = array_map(function($s) { return strtoupper($s->key); }, $obj->aggregations->term_agg->buckets);
 
+    $page = max($_GET['page'], 1);
+    $limit = @intval($_GET['limit']) ?: 100;
     $cmd = [
         'query' => array(
-            'ids' => array('values' => array_keys($meets)),
+            'bool' => [
+                'must' => [
+                    'ids' => array('values' => $meet_ids),
+                ],
+                'filter' => [],
+            ],
         ),
-        'size' => 10000,
+        'sort' => ['date' => 'desc'],
+        'size' => $limit,
+        'from' => $limit * $page - $limit,
     ];
+    if (array_key_exists('term', $_GET)) {
+        $cmd['query']['bool']['filter'][] = ['range' => ['term' => [
+            'gte' => intval($_GET['term']),
+            'lte' => intval($_GET['term']),
+        ]]];
+    }
+    if (array_key_exists('sessionPeriod', $_GET)) {
+        $cmd['query']['bool']['filter'][] = ['range' => ['sessionPeriod' => [
+            'gte' => intval($_GET['sessionPeriod']),
+            'lte' => intval($_GET['sessionPeriod']),
+        ]]];
+    }
+    if (array_key_exists('dateStart', $_GET)) {
+        $cmd['query']['bool']['filter'][] = ['range' => ['date' => [
+            'gte' => intval($_GET['dateStart']),
+        ]]];
+    }
+    if (array_key_exists('dateEnd', $_GET)) {
+        $cmd['query']['bool']['filter'][] = ['range' => ['date' => [
+            'lte' => intval($_GET['dateEnd']),
+        ]]];
+    }
+
     $obj = API::query('/meet/_search', 'GET', json_encode($cmd));
+    $ret = new StdClass;
+    $ret->total = $obj->hits->total;
+    $ret->limit = $limit;
+    $ret->totalpage = ceil($ret->total / $ret->limit);
+    $ret->page = $page;
+    $ret->meets = [];
     foreach ($obj->hits->hits as $hit) {
         $record = $hit->_source;
         $record->id = $hit->_id;
         $record->extra = json_decode($record->extra);
-        $records->meets[] = $record;
+        $record->api_url = 'https://' . $_SERVER['HTTP_HOST'] . '/api/speech/' . $hit->_id;
+        $ret->meets[] = $record;
     }
-    json_output($records, JSON_UNESCAPED_UNICODE);
+
+    json_output($ret, JSON_UNESCAPED_UNICODE);
     exit;
 
 } elseif ($method == 'speaker' and $speaker  = $params[0]) {

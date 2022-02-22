@@ -40,6 +40,16 @@
         </ul>
     </li>
     <li>
+        /api/speaker/{name}/meet 列出 name 的參與會議記錄（依時間排序，新的在前面）
+        <ul>
+            <li>參數 limit: 指定要回傳多少筆，預設 100 筆</li>
+            <li>參數 page: 要會傳第幾頁，預設第 1 頁，沒指定 page 的話回傳內容不包含筆數和分頁資訊（為了與舊程式相容）</li>
+            <li>參數 term: 想要篩選第幾屆的會議，預設不篩選</li>
+            <li>參數 sessionPeriod: 想要篩選第幾會期的會議，預設不篩選</li>
+            <li>參數 dateStart: 想要篩選的開始日期，包含該日期，預設不篩選，格式為 YYYYMMDD (Ex: 20210120)</li>
+            <li>參數 dateEnd: 想要篩選的開始日期，包含該日期，預設不篩選，格式為 YYYYMMDD (Ex: 20210120)</li>
+        </ul>
+    <li>
         /api/vote/{name} 列出 name 的所有投票記錄
         <ul>
             <li>參數 limit: 指定要回傳多少筆，預設 100 筆</li>
