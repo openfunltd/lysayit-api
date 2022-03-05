@@ -404,7 +404,7 @@ if ($method == 'stat') {
     json_output($ret, JSON_UNESCAPED_UNICODE);
     exit;
 } elseif ($method == 'vote' and $speaker  = $params[0]) {
-    $limit = @max(intval($_GET['limit']), 100);
+    $limit = @intval($_GET['limit']) ?: 100;
     $page = @max(intval($_GET['page']), 1);
     $cmd = [
         'query' => array(
