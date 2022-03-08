@@ -302,7 +302,10 @@ if ($method == 'stat') {
         'size' => 0,
     ];
     $obj = API::query('/speech/_search', 'GET', json_encode($cmd));
-    $meet_ids = array_map(function($s) { return strtoupper($s->key); }, $obj->aggregations->term_agg->buckets);
+    $meet_counts = [];
+    foreach ($obj->aggregations->term_agg->buckets as $bucket) {
+        $meet_counts[strtoupper($bucket->key)] = $bucket->doc_count;
+    }
 
     $page = max($_GET['page'], 1);
     $limit = @intval($_GET['limit']) ?: 100;
@@ -310,7 +313,7 @@ if ($method == 'stat') {
         'query' => array(
             'bool' => [
                 'must' => [
-                    'ids' => array('values' => $meet_ids),
+                    'ids' => array('values' => array_keys($meet_counts)),
                 ],
                 'filter' => [],
             ],
@@ -353,6 +356,7 @@ if ($method == 'stat') {
         $record = $hit->_source;
         $record->id = $hit->_id;
         $record->extra = json_decode($record->extra);
+        $record->speech_count = $meet_counts[$hit->_id];
         $record->api_url = 'https://' . $_SERVER['HTTP_HOST'] . '/api/speech/' . $hit->_id;
         $ret->meets[] = $record;
     }
