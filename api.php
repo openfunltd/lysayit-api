@@ -201,6 +201,7 @@ if ($method == 'stat') {
                 'query' => strval($_GET['q']),
             ],
         ),
+        'sort' => ['term' => 'desc', 'meet_id' => 'desc'],
         'size' => 100,
         'from' => 100 * $page - 100,
     ];
