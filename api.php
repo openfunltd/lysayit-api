@@ -301,9 +301,9 @@ if ($method == 'stat') {
         ],
         'size' => 0,
     ];
-    $obj = API::query('/speech/_search', 'GET', json_encode($cmd));
+    $obj1 = API::query('/speech/_search', 'GET', json_encode($cmd));
     $meet_counts = [];
-    foreach ($obj->aggregations->term_agg->buckets as $bucket) {
+    foreach ($obj1->aggregations->term_agg->buckets as $bucket) {
         $meet_counts[strtoupper($bucket->key)] = $bucket->doc_count;
     }
 
@@ -367,6 +367,8 @@ if ($method == 'stat') {
         if ($obj->hits->hits[0]) {
             $ret->person_data = $obj->hits->hits[0]->_source;
             $ret->person_data->extra = json_decode($ret->person_data->extra);
+            $ret->person_data->meet_count = count($obj1->aggregations->term_agg->buckets);
+            $ret->person_data->speech_count = $obj1->hits->total;
         }
     }
 
