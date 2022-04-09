@@ -244,9 +244,11 @@ if ($method == 'stat') {
     ];
     $obj = API::query('/speech/_search', 'GET', json_encode($cmd));
     $records = array();
+    $speakers = [];
     foreach ($obj->hits->hits as $hit) {
         $record = $hit->_source;
         unset($record->meet_id);
+        $speakers[intval($record->term) . '-' . $record->speaker] = true;
         $records[$record->lineno] = $record;
     }
 
@@ -257,16 +259,15 @@ if ($method == 'stat') {
         'size' => 10000,
     ];
     $obj = API::query('/vote/_search', 'GET', json_encode($cmd));
-    $speakers = [];
     foreach ($obj->hits->hits as $hit) {
         $record = $hit->_source;
-        $speakers[$record->speaker] = true;
         $records[$record->line_no]->vote_data = $record;
     }
 
     if (array_key_exists('full', $_GET) and $_GET['full']) {
         $ret = new StdClass;
         $ret->speech = array_values($records);
+        $ret->persons = [];
         $obj = API::query('/meet/' . $meet_id, 'GET');
         if ($obj->found) {
             $ret->info = $obj->_source;
@@ -278,7 +279,11 @@ if ($method == 'stat') {
             ),
             'size' => 10000,
         ];
-    $obj = API::query('/meet/_search', 'GET', json_encode($cmd));
+        $obj = API::query('/person/_search', 'GET', json_encode($cmd));
+        foreach ($obj->hits->hits as $hit) {
+            $hit->_source->extra = json_decode($hit->_source->extra);
+            $ret->persons[] = $hit->_source;
+        }
 
         $records = $ret;
     } else {
