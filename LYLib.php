@@ -197,4 +197,32 @@ class LYLib
             file_put_contents(__DIR__ . "/txtfile/{$basename}", $content);
         }
     }
+
+    protected static $_person_data = null;
+    public static function isLyerName($term, $speaker)
+    {
+        if (is_null(self::$_person_data)) {
+            error_log("抓取歷屆委員名單");
+            $fp = fopen('php://temp', 'rw');
+            fputs($fp, LYLib::getPersonList());
+            fseek($fp, 0, SEEK_SET);
+            $columns = fgetcsv($fp);
+            $columns[0] = 'term';
+
+            $person_data = [];
+            while ($rows = fgetcsv($fp)) {
+                $values = array_combine($columns, $rows);
+                $values['term'] = intval($values['term']);
+                $person_data[$values['term'] . '-' . $values['name']] = 
+                    [$values['term'], $values['name'], $values['picUrl'], $values['partyGroup']];
+            }
+            self::$_person_data = $person_data;
+        }
+        $k = intval($term) . '-' . str_replace('委員', '', $speaker);
+        if (array_key_exists($k, self::$_person_data) and $d = self::$_person_data[$k]) {
+            return $d[1];
+        }
+        return false;
+    }
+
 }
