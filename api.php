@@ -360,6 +360,15 @@ if ($method == 'stat') {
         $record->api_url = 'https://' . $_SERVER['HTTP_HOST'] . '/api/speech/' . $hit->_id;
         $ret->meets[] = $record;
     }
+    if ($_GET['term']) {
+        $obj = API::query('/person/_search/', 'GET', json_encode([
+            'query' => [ 'terms' => ['_id' => [intval($_GET['term']) . '-' . $speaker]]],
+        ]));
+        if ($obj->hits->hits[0]) {
+            $ret->person_data = $obj->hits->hits[0]->_source;
+            $ret->person_data->extra = json_decode($ret->person_data->extra);
+        }
+    }
 
     json_output($ret, JSON_UNESCAPED_UNICODE);
     exit;
