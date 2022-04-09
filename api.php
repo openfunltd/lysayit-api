@@ -234,6 +234,7 @@ if ($method == 'stat') {
     json_output($records, JSON_UNESCAPED_UNICODE);
     exit;
 } else if ($method == 'speech' and $meet_id = $params[0]) {
+    $meet_id = str_replace('.doc', '', $meet_id);
     $cmd = [
         'query' => array(
             'match' => array('meet_id' => $meet_id),
