@@ -4,7 +4,7 @@ include(__DIR__ . '/init.inc.php');
 $uri = explode('?', $_SERVER['REQUEST_URI'])[0];
 if ($uri == '/html') {
     $meet_id = $_GET['meet_id'];
-    $content = file_get_contents('http://twlydata.s3.amazonaws.com/data/communique/html/' . $meet_id);
+    $content = file_get_contents('http://lydata.ronny-s3.click/publication-html/' . $meet_id);
     if (!$obj = json_decode($content)) {
         echo '404 not found';
         exit;
@@ -12,7 +12,7 @@ if ($uri == '/html') {
     $content = base64_decode($obj->content);
     $content = preg_replace_callback('#<img src="([^"]*)"#', function($matches) use ($meet_id) {
         $id = explode('_html_', $matches[1])[1];
-        return '<img src="https://twlydata.s3.amazonaws.com/data/picfile/' . $meet_id . '-' . $id . '"';
+        return '<img src="https://lydata.ronny-s3.click/picfile/' . $meet_id . '-' . $id . '"';
     }, $content);
     echo $content;
     exit;
