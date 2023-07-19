@@ -66,15 +66,29 @@ class LYLib
 
     public static function dbQuery($url, $method = 'GET', $data = null)
     {
-        $curl = curl_init(getenv('SEARCH_URL') . $url);
+        $curl = curl_init(getenv('ELASTIC_URL') . $url);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        $_user = getenv('ELASTIC_USER');
+        $_password = getenv('ELASTIC_PASSWORD');
+        curl_setopt($curl, CURLOPT_USERPWD, $_user . ':' . $_password);
+        curl_setopt($curl, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+        ]);
         if ($method != 'GET') {
             curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $method);
-            if (!is_null($data)) {
-                curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
-            }
+        }
+        if (!is_null($data)) {
+            curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
         }
         $content = curl_exec($curl);
+        $obj = json_decode($content);
+        if (!$obj) {
+            throw new Exception("error: " . $content);
+        }
+        if (property_exists($obj, 'error') and $obj->error) {
+            file_put_contents('error.data', $data);
+            throw new Exception("error: " . json_encode($obj, JSON_UNESCAPED_UNICODE));
+        }
         curl_close($curl);
         return $content;
     }
@@ -88,8 +102,9 @@ class LYLib
         } else {
             $mappings = [$mapping];
         }
+        $prefix = getenv('ELASTIC_PREFIX');
         foreach ($mappings as $mapping) {
-            $ret = self::dbQuery("/{$mapping}/_bulk", 'PUT', self::$_db_bulk_pool[$mapping]);
+            $ret = self::dbQuery("/{$prefix}{$mapping}/_bulk", 'PUT', self::$_db_bulk_pool[$mapping]);
             $ids = [];
             foreach (json_decode($ret)->items as $command) {
                 foreach ($command as $action => $result) {
@@ -97,8 +112,9 @@ class LYLib
                         $ids[] = $result->_id;
                         continue;
                     }
+                    file_put_contents('error.data', self::$_db_bulk_pool[$mapping]);
                     print_r($result);
-                    exit;
+                    continue;
                 }
             }
 
@@ -236,4 +252,26 @@ class LYLib
         return false;
     }
 
+    public static function createIndex($name, $data)
+    {
+        $prefix = getenv('ELASTIC_PREFIX');
+        return self::dbQuery("/{$prefix}{$name}", 'PUT', json_encode([
+            'mappings' => $data,
+            'settings'=>['analysis' => [
+                'analyzer' => [
+                    "default" =>[ 
+                        "tokenizer" => "keyword",
+                        "filter"=> ["lowercase"],
+                    ],
+                ],
+            ]],
+
+        ]));
+    }
+
+    public static function dropIndex($name)
+    {
+        $prefix = getenv('ELASTIC_PREFIX');
+        return self::dbQuery("/{$prefix}{$name}", 'DELETE');
+    }
 }
