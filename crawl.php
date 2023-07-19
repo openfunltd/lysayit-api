@@ -6,33 +6,22 @@ include(__DIR__ . '/config.php');
 include(__DIR__ . '/Parser.php');
 include(__DIR__ . '/S3Lib.php');
 
-error_log("抓取歷屆委員名單");
-
-$fp = fopen('php://temp', 'rw');
-fputs($fp, LYLib::getPersonList());
-fseek($fp, 0, SEEK_SET);
-$columns = fgetcsv($fp);
-$columns[0] = 'term';
-
-$person_data = [];
-while ($rows = fgetcsv($fp)) {
-    $values = array_combine($columns, $rows);
-    $person_data[$values['term'] . '-' . $values['name']] = 
-        [$values['term'], $values['name'], $values['picUrl'], $values['partyGroup']];
-}
-
 error_log("更新最近一年資料");
 $oldt = $oldp = 0;
 $list_files = [];
-for ($ym = time(); $ym > time() - 86400 * 365; $ym = strtotime('-1 month', $ym)) {
+$start = time();  - 86400 * 365 * 4;
+$end = time() - 86400 * 365 * 10;
+for ($ym = $start; $ym > $end; $ym = strtotime('-1 month', $ym)) {
     list($term, $period) = LYLib::getTermPeriodByDate($ym);
     if ($oldt != $term or $oldp != $period) {
         $oldt = $term;
         $oldp = $period;
 
-        $content = LYLib::getListFromTermPeriod($term, $period);
         $target = sprintf(__DIR__ . "/list/%02d%02d.csv", $term, $period);
-        file_put_contents($target, $content);
+        if (!file_exists($target)) {
+            $content = LYLib::getListFromTermPeriod($term, $period);
+            file_put_contents($target, $content);
+        }
         $list_files[] = $target;
     }
 }
@@ -44,6 +33,7 @@ error_log("抓取 DOC 檔");
 // 抓取沒有的 doc 檔
 foreach ($list_files as $file) {
     $fp = fopen($file, 'r');
+    error_log($file);
     $columns = fgetcsv($fp);
     if (strpos($columns[0], 'comYear') === false) {
         error_log("skip {$file}");
@@ -51,11 +41,19 @@ foreach ($list_files as $file) {
     }
     $columns[0] = 'comYear';
     $docfull = array();
+    $lineno = 0;
     while ($rows = fgetcsv($fp)) {
+        $lineno ++;
+        if (count($columns) != count($rows)) {
+            error_log($lineno);
+        }
         $values = array_map('trim', array_combine($columns, $rows));
         unset($values['']);
         $docfilename = basename($values['docUrl']);
         $meet_id = str_replace('.doc', '', $docfilename);
+        if (strpos($meet_id, 'LCIDC01_112') !== 0) {
+            //continue;
+        }
         if (!property_exists($meet_info, $meet_id)) {
             $values['subject'] = [$values['subject']];
             $meet_info->{$meet_id} = $values;
@@ -73,19 +71,22 @@ foreach ($list_files as $file) {
         if (file_exists("docfile/{$docfilename}") and filesize("docfile/{$docfilename}")) {
             continue;
         }
+        //continue;
         error_log($values['docUrl']);
-        system(sprintf("wget -O %s %s", escapeshellarg("tmp.doc"), escapeshellarg($values['docUrl'])));
-        rename("tmp.doc", "docfile/{$docfilename}");
+        system(sprintf("wget -4 -O %s %s", escapeshellarg("tmp.doc"), escapeshellarg($values['docUrl'])));
+        copy("tmp.doc", "docfile/{$docfilename}");
     }
 }
 
 $prev_meet_id = null;
 $prev_info = null;
+$prev_count = 2;
 foreach ($meet_info as $meet_id => $meet_data) {
+    $same_title = false;
     try {
         LYLib::parseTxtFile($meet_id . ".doc");
     } catch (Exception $e) {
-        readline("$meet_id error " . $e->getMessage());
+        //readline("$meet_id error " . $e->getMessage());
         continue;
     }
     $file = __DIR__ . "/txtfile/{$meet_id}.doc";
@@ -97,6 +98,7 @@ foreach ($meet_info as $meet_id => $meet_data) {
         $vote_id = "{$meet_id}-{$vote->line_no}";
         $data = [
             'meet_id' => $meet_id,
+            'date' => 19110000 + intval(substr($meet_data['meetingDate'], 0, 7)),
             'term' => $meet_data['term'],
             'line_no' => $vote->line_no,
         ];
@@ -132,7 +134,9 @@ foreach ($meet_info as $meet_id => $meet_data) {
             continue;
         }
         if ($meet_info->{$prev_meet_id}['meetingDate'] == $meet_info->{$meet_id}['meetingDate']) {
-            $info->title = $prev_info->title;
+            $info->title = $prev_info->title . '(' . $prev_count . ')';
+            $prev_count ++;
+            $same_title = true;
             if (property_exists($prev_info, '時間')) {
                 $info->{'時間'} = $prev_info->{'時間'};
             }
@@ -157,7 +161,7 @@ foreach ($meet_info as $meet_id => $meet_data) {
         'title' => $meet_data['title'],
         'term' => $meet_data['term'],
         'sessionPeriod' => $meet_data['sessionPeriod'],
-        'date' => 19110000 + intval($meet_data['meetingDate']),
+        'date' => 19110000 + intval(substr($meet_data['meetingDate'], 0, 7)),
         'extra' => json_encode($meet_data),
     ];
 
@@ -173,8 +177,11 @@ foreach ($meet_info as $meet_id => $meet_data) {
             $speaker = '';
         }
         $speaker = preg_replace('/（.*）/', '', $speaker);
-        if (array_key_exists(intval($term) . '-' . str_replace('委員', '', $speaker), $person_data) and $d = $person_data[intval($term) . '-' . str_replace('委員', '', $speaker)]) {
-            $speaker = $d[1];
+        $speaker_type = 1; // other
+        $term = $meet_data['term'];
+        if ($n = LYLib::isLyerName($term, $speaker)) {
+            $speaker = $n;
+            $speaker_type = 0;
         }
         $lineno = $block_lines[$idx];
         $data = [
@@ -182,11 +189,16 @@ foreach ($meet_info as $meet_id => $meet_data) {
             'term' => $meet_data['term'],
             'lineno' => $lineno,
             'speaker' => $speaker,
+            'speaker_type' => intval($speaker_type),
             'content' => $block,
         ];
         LYLib::dbBulkInsert('speech', "{$meet_id}-{$lineno}", $data);
     }
-    $prev_meet_id = $meet_id;
-    $prev_info = $info;
+
+    if (!$same_title) {
+        $prev_meet_id = $meet_id;
+        $prev_count = 2;
+        $prev_info = $info;
+    }
 }
 LYLib::dbBulkCommit();
