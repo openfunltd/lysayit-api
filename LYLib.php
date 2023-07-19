@@ -43,6 +43,7 @@ class LYLib
         $curl = curl_init($url);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_USERAGENT, 'Chrome');
+        curl_setopt($curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
         $content = curl_exec($curl);
         file_put_contents(__DIR__ . '/person.csv', $content);
         return $content;
@@ -58,6 +59,7 @@ class LYLib
         $curl = curl_init($url);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_USERAGENT, 'Chrome');
+        curl_setopt($curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
         $content = curl_exec($curl);
         return $content;
     }
