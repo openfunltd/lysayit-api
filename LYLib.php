@@ -128,14 +128,19 @@ class LYLib
         if (!array_key_exists($mapping, self::$_db_bulk_pool)) {
             self::$_db_bulk_pool[$mapping] = '';
         }
+        $encdata = json_encode([
+            'doc' => $data,
+            'doc_as_upsert' => true,
+        ]);
+        if (!$encdata) {
+            // TODO: LCIDC01_1124101_00003
+            return;
+        }
         self::$_db_bulk_pool[$mapping] .=
             json_encode(array(
                 'update' => array('_id' => $id),
             )) . "\n"
-            . json_encode(array(
-                'doc' => $data,
-                'doc_as_upsert' => true,
-            )) . "\n";
+            . $encdata . "\n";
         if (strlen(self::$_db_bulk_pool[$mapping]) > 1000000) {
             self::dbBulkCommit($mapping);
         }
