@@ -71,7 +71,6 @@ foreach ($list_files as $file) {
         if (file_exists("docfile/{$docfilename}") and filesize("docfile/{$docfilename}")) {
             continue;
         }
-        //continue;
         error_log($values['docUrl']);
         system(sprintf("wget -4 -O %s %s", escapeshellarg("tmp.doc"), escapeshellarg($values['docUrl'])));
         copy("tmp.doc", "docfile/{$docfilename}");
