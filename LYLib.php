@@ -202,7 +202,7 @@ class LYLib
                     return '==========';
                 }
                 $uploading_pics[$pic[0]] = true;
-                return "[pic:https://twlydata.s3.amazonaws.com/data/picfile/{$basename}-{$pic[0]}]";
+                return "[pic:https://lydata.ronny-s3.click/picfile/{$basename}-{$pic[0]}]";
             }, $content);
 
             file_put_contents(__DIR__ . "/txtfile/{$basename}", $content);
