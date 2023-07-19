@@ -238,11 +238,23 @@ class Parser
             }
             if (strpos($line, '立法院第') === 0) {
                 $ret->title = $line;
+                $first_line = $line;
+                $block_tmp = [];
+                $origin_block = json_decode(json_encode($blocks[0]));
                 while (trim($blocks[0][0]) != '') {
                     if (strpos(str_replace(' ', '', $blocks[0][0]), '時間') === 0) {
                         break;
                     }
-                    $ret->title .= array_shift($blocks[0]);
+                    $line = array_shift($blocks[0]);
+                    $ret->title .= $line;
+                    $block_tmp[] = $line; 
+                }
+                if (strlen($ret->title) > 5000) {
+                    $ret->title = $first_line;
+                    foreach ($block_tmp as $blk) {
+                        array_push($blocks[0], $blk);
+                    }
+                    break;
                 }
                 continue;
             }
