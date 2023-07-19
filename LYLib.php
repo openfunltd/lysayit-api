@@ -127,41 +127,50 @@ class LYLib
 
     public static function parseDoc($file)
     {
+        error_log("parse doc $file");
         $basename = basename($file);
         if (file_exists(__DIR__ . "/htmlfile/{$basename}")) {
-            return json_decode(file_get_contents(__DIR__ . "/htmlfile/{$basename}"))->pics;
-        }
-        error_log("parse doc {$file}");
-        $cmd = sprintf("curl -X POST -F %s -F \"output_type=html\" https://demo.sheethub.net/soffice/index.php", escapeshellarg('file=@' . $file));
-        $content = (`$cmd`);
-        $ret = json_decode($content);
-        if (!$ret) {
-            echo $content;
-            exit;
-        }
-        $base = basename($file);
-
-        $images = new StdClass;
-        foreach ($ret->attachments as $attachment) {
-            $img_name = explode('_html_', $attachment->file_name)[1];
-            file_put_contents(__DIR__ . '/picfile/' . $base . '-' . $img_name, base64_decode($attachment->content));
-            S3Lib::put(__DIR__ . "/picfile/{$basename}-{$img_name}", "data/picfile/{$basename}-{$img_name}");
-            unlink(__DIR__ . "/picfile/{$basename}-{$img_name}");
-
-            $images->{$img_name} = true;
-        }
-        unset($ret->attachments);
-        $content = base64_decode($ret->content);
-        preg_match_all('#<img src="([^"]+)"[^>]*"#', $content, $matches);
-
-        $pics = [];
-        foreach ($matches[1] as $idx => $file_name) {
-            $img_name = explode('_html_', $file_name)[1];
-            if (!preg_match('/width="(\d+)" height="(\d+)"/', $matches[0][$idx], $matches2)) {
+            $pics = json_decode(file_get_contents(__DIR__ . "/htmlfile/{$basename}"))->pics;
+            if ($pics) {
             }
-            $pics[] = [$img_name, $matches2[1], $matches2[2], $idx];
+            return $pics;
         }
-        $ret->pics = $pics;
+        $cmd = sprintf("curl -X POST -F %s -F \"output_type=html\" https://soffice.ronny.tw/", escapeshellarg('file=@' . $file));
+        $fp = popen($cmd, 'r');
+        $base = basename($file);
+        $images = new StdClass;
+        $ret = new StdClass;
+        while ($line = fgets($fp)) {
+            if (!$obj = json_decode($line)) {
+                echo $line;
+                echo 'error line';
+                exit;
+            }
+            if ($obj[0] == 'attachments') {
+                $attachment = $obj[1];
+                $img_name = explode('_html_', $attachment->file_name)[1];
+                file_put_contents(__DIR__ . '/picfile/' . $base . '-' . $img_name, base64_decode($attachment->content));
+                //S3Lib::put(__DIR__ . "/picfile/{$basename}-{$img_name}", "data/picfile/{$basename}-{$img_name}");
+                //unlink(__DIR__ . "/picfile/{$basename}-{$img_name}");
+
+                $images->{$img_name} = true;
+            } elseif ($obj[0] == 'content') {
+                $ret->content = $obj[1];
+                $content = base64_decode($obj[1]);
+                preg_match_all('#<img src="([^"]+)"[^>]*"#', $content, $matches);
+                $pics = [];
+                foreach ($matches[1] as $idx => $file_name) {
+                    $img_name = explode('_html_', $file_name)[1];
+                    if (!preg_match('/width="(\d+)" height="(\d+)"/', $matches[0][$idx], $matches2)) {
+                    }
+                    $pics[] = [$img_name, $matches2[1], $matches2[2], $idx];
+                }
+                $ret->pics = $pics;
+            } else {
+                $ret->{$obj[0]} = $obj[1];
+            }
+        }
+
         file_put_contents(__DIR__ . "/htmlfile/{$basename}", json_encode($ret));
         return $pics;
     }
