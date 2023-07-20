@@ -262,15 +262,6 @@ class LYLib
         $prefix = getenv('ELASTIC_PREFIX');
         return self::dbQuery("/{$prefix}{$name}", 'PUT', json_encode([
             'mappings' => $data,
-            'settings'=>['analysis' => [
-                'analyzer' => [
-                    "default" =>[ 
-                        "tokenizer" => "keyword",
-                        "filter"=> ["lowercase"],
-                    ],
-                ],
-            ]],
-
         ]));
     }
 
