@@ -2,6 +2,7 @@
 
 include(__DIR__ . '/init.inc.php');
 $uri = explode('?', $_SERVER['REQUEST_URI'])[0];
+$prefix = getenv('ELASTIC_PREFIX');
 if ($uri == '/html') {
     $meet_id = $_GET['meet_id'];
     $content = file_get_contents('http://lydata.ronny-s3.click/publication-html/' . $meet_id);
@@ -61,9 +62,9 @@ if ($method == 'stat') {
         ],
         'size' => 0,
     ];
-    $obj = API::query('/meet/_search', 'GET', json_encode($cmd));
+    $obj = LYLib::dbQuery("/{$prefix}meet/_search", 'GET', json_encode($cmd));
     $ret = new StdClass;
-    $ret->meet_total = $obj->hits->total;
+    $ret->meet_total = 0;
     $ret->date_min = $obj->aggregations->date_min->value;
     $ret->date_max = $obj->aggregations->date_max->value;
     $ret->terms = [];
@@ -82,6 +83,7 @@ if ($method == 'stat') {
             $ret->terms[$bucket->key]->periods[$pbucket->key]->date_min = $pbucket->date_min->value;
             $ret->terms[$bucket->key]->periods[$pbucket->key]->date_max = $pbucket->date_max->value;
             $ret->terms[$bucket->key]->periods[$pbucket->key]->meet_count = $pbucket->doc_count;
+            $ret->meet_total += $pbucket->doc_count;
         }
         ksort($ret->terms[$bucket->key]->periods);
         $ret->terms[$bucket->key]->periods = array_values($ret->terms[$bucket->key]->periods);
@@ -97,14 +99,15 @@ if ($method == 'stat') {
         ],
         'size' => 0,
     ];
-    $obj = API::query('/vote/_search', 'GET', json_encode($cmd));
-    $ret->vote_count = $obj->hits->total;
+    $obj = LYLib::dbQuery("/{$prefix}vote/_search", 'GET', json_encode($cmd));
+    $ret->vote_count = 0;
     foreach ($obj->aggregations->term_agg->buckets as $bucket) {
         if (!array_key_exists($bucket->key, $ret->terms)) {
             $ret->terms[$bucket->key] = new StdClass;;
             $ret->terms[$bucket->key]->term = $bucket->key;
         }
         $ret->terms[$bucket->key]->vote_count = $bucket->doc_count;
+        $ret->vote_count += $bucket->doc_count;
     }
 
     $cmd = [
@@ -120,8 +123,8 @@ if ($method == 'stat') {
         ],
         'size' => 0,
     ];
-    $obj = API::query('/speech/_search', 'GET', json_encode($cmd));
-    $ret->speech_count = $obj->hits->total;
+    $obj = LYLib::dbQuery("/{$prefix}speech/_search", 'GET', json_encode($cmd));
+    $ret->speech_count = 0;
     foreach ($obj->aggregations->term_agg->buckets as $bucket) {
         if (!array_key_exists($bucket->key, $ret->terms)) {
             $ret->terms[$bucket->key] = new StdClass;;
@@ -129,6 +132,7 @@ if ($method == 'stat') {
         }
         $ret->terms[$bucket->key]->speaker_count = $bucket->speaker_count->value;
         $ret->terms[$bucket->key]->speach_count = $bucket->doc_count;
+        $ret->speech_count += $bucket->doc_count;
     }
 
     ksort($ret->terms);
@@ -172,7 +176,7 @@ if ($method == 'stat') {
             'lte' => intval($_GET['dateEnd']),
         ]]];
     }
-    $obj = API::query('/meet/_search', 'GET', json_encode($cmd));
+    $obj = LYLib::dbQuery("/{$prefix}meet/_search", 'GET', json_encode($cmd));
 
     $records = array();
     $ret = new StdClass;
@@ -205,7 +209,7 @@ if ($method == 'stat') {
         'size' => 100,
         'from' => 100 * $page - 100,
     ];
-    $obj = API::query('/speech/_search', 'GET', json_encode($cmd));
+    $obj = LYLib::dbQuery("/{$prefix}speech/_search", 'GET', json_encode($cmd));
     $records = new StdClass;
     $records->page = $page;
     $records->total = $obj->hits->total;
@@ -224,7 +228,7 @@ if ($method == 'stat') {
         ),
         'size' => 10000,
     ];
-    $obj = API::query('/meet/_search', 'GET', json_encode($cmd));
+    $obj = LYLib::dbQuery("/{$prefix}meet/_search", 'GET', json_encode($cmd));
     foreach ($obj->hits->hits as $hit) {
         $record = $hit->_source;
         $record->id = $hit->_id;
@@ -242,7 +246,7 @@ if ($method == 'stat') {
         'sort' => 'lineno',
         'size' => 10000,
     ];
-    $obj = API::query('/speech/_search', 'GET', json_encode($cmd));
+    $obj = LYLib::dbQuery("/{$prefix}speech/_search", 'GET', json_encode($cmd));
     $records = array();
     $speakers = [];
     foreach ($obj->hits->hits as $hit) {
@@ -258,7 +262,7 @@ if ($method == 'stat') {
         ),
         'size' => 10000,
     ];
-    $obj = API::query('/vote/_search', 'GET', json_encode($cmd));
+    $obj = LYLib::dbQuery("/{$prefix}vote/_search", 'GET', json_encode($cmd));
     foreach ($obj->hits->hits as $hit) {
         $record = $hit->_source;
         $records[$record->line_no]->vote_data = $record;
@@ -268,7 +272,7 @@ if ($method == 'stat') {
         $ret = new StdClass;
         $ret->speech = array_values($records);
         $ret->persons = [];
-        $obj = API::query('/meet/' . $meet_id, 'GET');
+        $obj = LYLib::dbQuery("/{$prefix}meet/" . $meet_id, 'GET');
         if ($obj->found) {
             $ret->info = $obj->_source;
             $ret->info->extra = json_decode($ret->info->extra);
@@ -279,7 +283,7 @@ if ($method == 'stat') {
             ),
             'size' => 10000,
         ];
-        $obj = API::query('/person/_search', 'GET', json_encode($cmd));
+        $obj = LYLib::dbQuery("/{$prefix}person/_search", 'GET', json_encode($cmd));
         foreach ($obj->hits->hits as $hit) {
             $hit->_source->extra = json_decode($hit->_source->extra);
             $ret->persons[] = $hit->_source;
@@ -307,7 +311,7 @@ if ($method == 'stat') {
         ],
         'size' => 0,
     ];
-    $obj1 = API::query('/speech/_search', 'GET', json_encode($cmd));
+    $obj1 = LYLib::dbQuery("/{$prefix}speech/_search", 'GET', json_encode($cmd));
     $meet_counts = [];
     foreach ($obj1->aggregations->term_agg->buckets as $bucket) {
         $meet_counts[strtoupper($bucket->key)] = $bucket->doc_count;
@@ -351,7 +355,7 @@ if ($method == 'stat') {
         ]]];
     }
 
-    $obj = API::query('/meet/_search', 'GET', json_encode($cmd));
+    $obj = LYLib::dbQuery("/{$prefix}meet/_search", 'GET', json_encode($cmd));
     $ret = new StdClass;
     $ret->total = $obj->hits->total;
     $ret->limit = $limit;
@@ -367,7 +371,7 @@ if ($method == 'stat') {
         $ret->meets[] = $record;
     }
     if ($_GET['term']) {
-        $obj = API::query('/person/_search/', 'GET', json_encode([
+        $obj = LYLib::dbQuery("/{$prefix}person/_search/", 'GET', json_encode([
             'query' => [ 'terms' => ['_id' => [intval($_GET['term']) . '-' . $speaker]]],
         ]));
         if ($obj->hits->hits[0]) {
@@ -391,7 +395,7 @@ if ($method == 'stat') {
         'size' => $limit,
         'from' => $limit * $page - $limit,
     ];
-    $obj = API::query('/speech/_search', 'GET', json_encode($cmd));
+    $obj = LYLib::dbQuery("/{$prefix}speech/_search", 'GET', json_encode($cmd));
     $ret = new StdClass;
     $ret->page = $page;
     $ret->limit = $limit;
@@ -410,7 +414,7 @@ if ($method == 'stat') {
         ),
         'size' => 10000,
     ];
-    $obj = API::query('/meet/_search', 'GET', json_encode($cmd));
+    $obj = LYLib::dbQuery("/{$prefix}meet/_search", 'GET', json_encode($cmd));
     foreach ($obj->hits->hits as $hit) {
         $meets[$hit->_id] = $hit->_source;
     }
@@ -439,7 +443,7 @@ if ($method == 'stat') {
         'size' => $limit,
         'from' => $limit * $page - $limit,
     ];
-    $obj = API::query('/vote/_search', 'GET', json_encode($cmd));
+    $obj = LYLib::dbQuery("/{$prefix}vote/_search", 'GET', json_encode($cmd));
     $ret = new StdClass;
     $ret->page = $page;
     $ret->limit = $limit;
@@ -459,7 +463,7 @@ if ($method == 'stat') {
         ),
         'size' => 10000,
     ];
-    $obj = API::query('/meet/_search', 'GET', json_encode($cmd));
+    $obj = LYLib::dbQuery("/{$prefix}meet/_search", 'GET', json_encode($cmd));
     foreach ($obj->hits->hits as $hit) {
         $meets[$hit->_id] = $hit->_source;
     }
@@ -507,7 +511,7 @@ if ($method == 'stat') {
         ],
         'size' => 0,
     ];
-    $obj = API::query('/speech/_search', 'GET', json_encode($cmd));
+    $obj = LYLib::dbQuery("/{$prefix}speech/_search", 'GET', json_encode($cmd));
     $records = new StdClass;
     $records->page = $page;
     $records->term = intval($params[0]);
@@ -534,7 +538,7 @@ if ($method == 'stat') {
         ),
         'size' => 10000,
     ];
-    $obj = API::query('/person/_search', 'GET', json_encode($cmd));
+    $obj = LYLib::dbQuery("/{$prefix}person/_search", 'GET', json_encode($cmd));
 
     foreach ($obj->hits->hits as $hit) {
         $records->persons[$hit->_id]->extra = json_decode($hit->_source->extra);

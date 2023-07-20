@@ -90,7 +90,7 @@ class LYLib
             throw new Exception("error: " . json_encode($obj, JSON_UNESCAPED_UNICODE));
         }
         curl_close($curl);
-        return $content;
+        return $obj;
     }
 
     public static $_db_bulk_pool = [];
