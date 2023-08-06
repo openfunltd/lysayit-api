@@ -272,7 +272,7 @@ if ($method == 'stat') {
         $ret = new StdClass;
         $ret->speech = array_values($records);
         $ret->persons = [];
-        $obj = LYLib::dbQuery("/{$prefix}meet/" . $meet_id, 'GET');
+        $obj = LYLib::dbQuery("/{$prefix}meet/_doc/" . $meet_id, 'GET');
         if ($obj->found) {
             $ret->info = $obj->_source;
             $ret->info->extra = json_decode($ret->info->extra);
