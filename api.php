@@ -180,7 +180,7 @@ if ($method == 'stat') {
 
     $records = array();
     $ret = new StdClass;
-    $ret->total = $obj->hits->total;
+    $ret->total = $obj->hits->total->value;
     $ret->limit = $limit;
     $ret->totalpage = ceil($ret->total / $ret->limit);
     $ret->page = $page;
@@ -212,8 +212,8 @@ if ($method == 'stat') {
     $obj = LYLib::dbQuery("/{$prefix}speech/_search", 'GET', json_encode($cmd));
     $records = new StdClass;
     $records->page = $page;
-    $records->total = $obj->hits->total;
-    $records->total_page = ceil($obj->hits->total / 100);
+    $records->total = $obj->hits->total->value;
+    $records->total_page = ceil($obj->hits->total->value / 100);
     $records->speeches = [];
     $records->meets = [];
     $meets = array();
@@ -357,7 +357,7 @@ if ($method == 'stat') {
 
     $obj = LYLib::dbQuery("/{$prefix}meet/_search", 'GET', json_encode($cmd));
     $ret = new StdClass;
-    $ret->total = $obj->hits->total;
+    $ret->total = $obj->hits->total->value;
     $ret->limit = $limit;
     $ret->totalpage = ceil($ret->total / $ret->limit);
     $ret->page = $page;
@@ -378,7 +378,7 @@ if ($method == 'stat') {
             $ret->person_data = $obj->hits->hits[0]->_source;
             $ret->person_data->extra = json_decode($ret->person_data->extra);
             $ret->person_data->meet_count = count($obj1->aggregations->term_agg->buckets);
-            $ret->person_data->speech_count = $obj1->hits->total;
+            $ret->person_data->speech_count = $obj1->hits->total->value;
         }
     }
 
@@ -399,7 +399,7 @@ if ($method == 'stat') {
     $ret = new StdClass;
     $ret->page = $page;
     $ret->limit = $limit;
-    $ret->total = $obj->hits->total;
+    $ret->total = $obj->hits->total->value;
     $ret->totalpage = ceil($ret->total / $ret->limit);
     $ret->records = [];
     $meets = [];
@@ -447,7 +447,7 @@ if ($method == 'stat') {
     $ret = new StdClass;
     $ret->page = $page;
     $ret->limit = $limit;
-    $ret->total = $obj->hits->total;
+    $ret->total = $obj->hits->total->value;
     $ret->totalpage = ceil($ret->total / $ret->limit);
     $ret->records = [];
     $meets = [];
