@@ -1,0 +1,337 @@
+openapi: 3.0.0
+info:
+  title: 'lysayit api'
+  version: '0.1'
+paths:
+  /html:
+    get:
+      summary: '回傳公報的 HTML 內容'
+      description: '回傳公報的 HTML 內容'
+      operationId: 1053ba8749e7d41c0205719e362a843e
+      parameters:
+        -
+          name: meet_id
+          in: query
+          description: '公報 ID'
+          required: true
+          schema:
+            type: string
+            example: LCIDC01_1077502_00003.doc
+      responses:
+        '200':
+          description: '回傳公報的 HTML 內容'
+        '404':
+          description: 找不到公報
+  /api/stat:
+    get:
+      summary: 取得資料庫統計
+      description: 取得資料庫統計
+      operationId: 6749b2d26dcd92dbfcd69c1cea7ad451
+      responses:
+        '200':
+          description: 取得資料庫統計
+  /api/meet:
+    get:
+      summary: 列出所有的會議
+      description: 列出所有的會議
+      operationId: 0f8262657fbef2a315f823703cabf7e1
+      parameters:
+        -
+          name: term
+          in: query
+          description: 屆別
+          required: false
+          schema:
+            type: integer
+            example: '9'
+        -
+          name: sessionPeriod
+          in: query
+          description: 會期
+          required: false
+          schema:
+            type: integer
+            example: '1'
+        -
+          name: dateStart
+          in: query
+          description: 開始日期
+          required: false
+          schema:
+            type: integer
+            example: '20170101'
+        -
+          name: dateEnd
+          in: query
+          description: 結束日期
+          required: false
+          schema:
+            type: integer
+            example: '20171231'
+        -
+          name: page
+          in: query
+          description: 頁數
+          required: false
+          schema:
+            type: integer
+            example: '1'
+        -
+          name: limit
+          in: query
+          description: 每頁筆數
+          required: false
+          schema:
+            type: integer
+            example: '100'
+      responses:
+        '200':
+          description: 列出所有的會議
+  /api/searchspeech:
+    get:
+      summary: '列出包含 keyword 的對話記錄'
+      description: '列出包含 keyword 的對話記錄'
+      operationId: 410c26590e19ec3cfaa1244ed745d9d0
+      parameters:
+        -
+          name: q
+          in: query
+          description: 關鍵字
+          required: true
+          schema:
+            type: string
+            example: 蔡英文
+        -
+          name: page
+          in: query
+          description: 頁數
+          required: false
+          schema:
+            type: integer
+            example: '1'
+      responses:
+        '200':
+          description: '列出包含 keyword 的對話記錄'
+  '/api/speech/{meet_id}':
+    get:
+      summary: '列出 meet_id 的所有會議記錄'
+      description: '列出 meet_id 的所有會議記錄'
+      operationId: 20c221cc40e162115a2d8e38a86832ab
+      parameters:
+        -
+          name: meet_id
+          in: path
+          description: '公報 ID'
+          required: true
+          schema:
+            type: string
+            example: LCIDC01_1077502_00003.doc
+        -
+          name: full
+          in: query
+          description: 是否要顯示完整資料
+          required: false
+          schema:
+            type: boolean
+            example: 'true'
+      responses:
+        '200':
+          description: '列出 meet_id 的所有會議記錄'
+        '404':
+          description: 找不到公報
+  '/api/speaker/{speaker}/meet':
+    get:
+      summary: '列出 name 的參與會議記錄（依時間排序，新的在前面）'
+      description: '列出 name 的參與會議記錄（依時間排序，新的在前面）'
+      operationId: 7ae3e3b83fc710256d111d1947b1504d
+      parameters:
+        -
+          name: speaker
+          in: path
+          description: 姓名
+          required: true
+          schema:
+            type: string
+            example: 黃國昌
+        -
+          name: term
+          in: query
+          description: 屆別
+          required: false
+          schema:
+            type: integer
+            example: '9'
+        -
+          name: sessionPeriod
+          in: query
+          description: 會期
+          required: false
+          schema:
+            type: integer
+            example: '1'
+        -
+          name: dateStart
+          in: query
+          description: 開始日期
+          required: false
+          schema:
+            type: integer
+            example: '20160101'
+        -
+          name: dateEnd
+          in: query
+          description: 結束日期
+          required: false
+          schema:
+            type: integer
+            example: '20161231'
+        -
+          name: page
+          in: query
+          description: 頁數
+          required: false
+          schema:
+            type: integer
+            example: '1'
+        -
+          name: limit
+          in: query
+          description: 每頁筆數
+          required: false
+          schema:
+            type: integer
+            example: '100'
+      responses:
+        '200':
+          description: '列出 name 的參與會議記錄（依時間排序，新的在前面）'
+        '404':
+          description: 找不到公報
+  '/api/speaker/{speaker}':
+    get:
+      summary: '列出 name 的所有對話記錄'
+      description: '列出 name 的所有對話記錄'
+      operationId: c8b486d36eeed7e1cd07d517a29d901d
+      parameters:
+        -
+          name: speaker
+          in: path
+          description: 姓名
+          required: true
+          schema:
+            type: string
+            example: 黃國昌
+        -
+          name: term
+          in: query
+          description: 屆別
+          required: false
+          schema:
+            type: integer
+            example: '9'
+        -
+          name: sessionPeriod
+          in: query
+          description: 會期
+          required: false
+          schema:
+            type: integer
+            example: '1'
+        -
+          name: dateStart
+          in: query
+          description: 開始日期
+          required: false
+          schema:
+            type: integer
+            example: '20160101'
+        -
+          name: dateEnd
+          in: query
+          description: 結束日期
+          required: false
+          schema:
+            type: integer
+            example: '20161231'
+        -
+          name: page
+          in: query
+          description: 頁數
+          required: false
+          schema:
+            type: integer
+            example: '1'
+        -
+          name: limit
+          in: query
+          description: 每頁筆數
+          required: false
+          schema:
+            type: integer
+            example: '100'
+      responses:
+        '200':
+          description: '列出 name 的所有對話記錄'
+        '404':
+          description: 找不到公報
+  '/api/vote/{speaker}':
+    get:
+      summary: '列出 name 的所有投票記錄'
+      description: '列出 name 的所有投票記錄'
+      operationId: 92784643a50cacc518e459e309c1cf67
+      parameters:
+        -
+          name: speaker
+          in: path
+          description: 姓名
+          required: true
+          schema:
+            type: string
+            example: 黃國昌
+        -
+          name: page
+          in: query
+          description: 頁數
+          required: false
+          schema:
+            type: integer
+            example: '1'
+        -
+          name: limit
+          in: query
+          description: 每頁筆數
+          required: false
+          schema:
+            type: integer
+            example: '100'
+      responses:
+        '200':
+          description: '列出 name 的所有投票記錄'
+        '404':
+          description: 找不到公報
+  '/api/term/{term}/speaker/{speaker_type}':
+    get:
+      summary: '列出第 term 屆的發言者'
+      description: '列出第 term 屆的發言者'
+      operationId: 002b9b5cbe57d817ce7617976d7b156a
+      parameters:
+        -
+          name: term
+          in: path
+          description: 屆別
+          required: true
+          schema:
+            type: integer
+            example: '9'
+        -
+          name: speaker_type
+          in: path
+          description: 發言者類型
+          required: true
+          schema:
+            type: integer
+            example: '1'
+      responses:
+        '200':
+          description: '列出第 term 屆的發言者'
+        '404':
+          description: 找不到公報
