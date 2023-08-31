@@ -780,6 +780,7 @@ class APIDispatcher
 
         if ($uri == '/swagger.yaml') {
             header('Content-Type: text/plain');
+            header('Access-Control-Allow-Origin: *');
             readfile(__DIR__ . '/swagger.yaml');
             return;
         }
