@@ -162,6 +162,59 @@ class APIDispatcher
     }
 
     /**
+     * 列出所有的公報
+     *
+     * @OA\Get(
+     *   path="/api/gazette",
+     *   summary="列出所有的公報",
+     *   tags={"公報"},
+     *   @OA\Parameter(
+     *     name="comYear", in="query", description="年別", required=false,
+     *     @OA\Schema( type="integer", example="109" )
+     *   ),
+     *   @OA\Response( response=200, description="列出所有的公報" )
+     * )
+     */
+    public static function gazette()
+    {
+        $prefix = getenv('ELASTIC_PREFIX');
+        $page = @max($_GET['page'], 1);
+        $limit = @intval($_GET['limit']) ?: 100;
+        $cmd = [
+            'query' => [
+                'bool' => [
+                    'must' => [],
+                    'filter' => [],
+                ],
+            ],
+            'size' => $limit,
+            'from' => $limit * $page - $limit,
+        ];
+        if (array_key_exists('comYear', $_GET)) {
+            $cmd['query']['bool']['filter'][] = [
+                'term' => ['comYear' => intval($_GET['comYear'])],
+            ];
+        }
+        $obj = LYLib::dbQuery("/{$prefix}gazette/_search", 'GET', json_encode($cmd));
+
+        $records = array();
+        $ret = new StdClass;
+        $ret->total = $obj->hits->total->value;
+        $ret->limit = $limit;
+        $ret->totalpage = ceil($ret->total / $ret->limit);
+        $ret->page = $page;
+        foreach ($obj->hits->hits as $hit) {
+            $record = $hit->_source;
+            $record->id = $hit->_id;
+            $records[] = $record;
+        }
+        $ret->data = $records;
+        if (!array_key_exists('page', $_GET)) {
+            $ret = $ret->data;
+        }
+        self::json_output($ret);
+    }
+    /**
      * 列出所有的會議
      *
      * @OA\Get(
@@ -801,6 +854,8 @@ class APIDispatcher
             self::stat();
         } elseif ($method == 'meet') {
             self::meet();
+        } elseif ($method == 'gazette') {
+            self::gazette();
         } elseif ($method == 'searchspeech') {
             self::searchspeech();
         } else if ($method == 'speech' and $meet_id = $params[0]) {
