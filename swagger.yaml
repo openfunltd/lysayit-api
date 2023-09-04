@@ -32,6 +32,25 @@ paths:
       responses:
         '200':
           description: 取得資料庫統計
+  /api/gazette:
+    get:
+      tags:
+        - 公報
+      summary: 列出所有的公報
+      description: 列出所有的公報
+      operationId: 2103616751055e078e3f765a959771db
+      parameters:
+        -
+          name: comYear
+          in: query
+          description: 年別
+          required: false
+          schema:
+            type: integer
+            example: '109'
+      responses:
+        '200':
+          description: 列出所有的公報
   /api/meet:
     get:
       summary: 列出所有的會議
