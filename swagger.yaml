@@ -51,6 +51,73 @@ paths:
       responses:
         '200':
           description: 列出所有的公報
+  /api/gazette_agenda:
+    get:
+      tags:
+        - 公報
+      summary: 列出符合條件的公報章節
+      description: 列出符合條件的公報章節
+      operationId: fb134870c7f558a4bdbbfa43cd24030d
+      parameters:
+        -
+          name: q
+          in: query
+          description: 關鍵字
+          required: false
+          schema:
+            type: string
+            example: 蔡英文
+        -
+          name: comYear
+          in: query
+          description: 年別
+          required: false
+          schema:
+            type: integer
+            example: '109'
+        -
+          name: term
+          in: query
+          description: 屆別
+          required: false
+          schema:
+            type: integer
+            example: '9'
+        -
+          name: sessionPeriod
+          in: query
+          description: 會期
+          required: false
+          schema:
+            type: integer
+            example: '1'
+        -
+          name: meetingDate
+          in: query
+          description: 會議日期
+          required: false
+          schema:
+            type: string
+            example: '2023-02-17'
+        -
+          name: meetingDateStart
+          in: query
+          description: 會議日期起始
+          required: false
+          schema:
+            type: string
+            example: '2023-02-01'
+        -
+          name: meetingDateEnd
+          in: query
+          description: 會議日期結束
+          required: false
+          schema:
+            type: string
+            example: '2023-02-28'
+      responses:
+        '200':
+          description: 列出符合條件的公報章節
   /api/meet:
     get:
       summary: 列出所有的會議
