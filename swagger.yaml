@@ -3,20 +3,22 @@ info:
   title: 'lysayit api'
   version: '0.1'
 paths:
-  /html:
+  '/html?agenda_id={agenda_id}':
     get:
+      tags:
+        - 公報
       summary: '回傳公報的 HTML 內容'
       description: '回傳公報的 HTML 內容'
-      operationId: 1053ba8749e7d41c0205719e362a843e
+      operationId: 82b22acba16157057c0709b1d16d3f00
       parameters:
         -
-          name: meet_id
+          name: agenda_id
           in: query
           description: '公報 ID'
           required: true
           schema:
             type: string
-            example: LCIDC01_1077502_00003.doc
+            example: LCIDC01_1077502_00003
       responses:
         '200':
           description: '回傳公報的 HTML 內容'
@@ -335,3 +337,7 @@ paths:
           description: '列出第 term 屆的發言者'
         '404':
           description: 找不到公報
+tags:
+  -
+    name: 公報
+    description: 公報相關
