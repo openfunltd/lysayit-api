@@ -2,6 +2,7 @@
 
 /**
  * @OA\Info(title="lysayit api", version="0.1")
+ * @OA\Tag(name="公報", description="公報相關")
  */
 class APIDispatcher
 {
@@ -16,10 +17,11 @@ class APIDispatcher
      * 回傳公報的 HTML 內容
      *
      * @OA\Get(
-     *   path="/html", summary="回傳公報的 HTML 內容",
+     *   path="/html?agenda_id={agenda_id}", summary="回傳公報的 HTML 內容",
+     *   tags={"公報"},
      *   @OA\Parameter(
-     *     name="meet_id", in="query", description="公報 ID", required=true,
-     *     @OA\Schema( type="string", example="LCIDC01_1077502_00003.doc" )
+     *     name="agenda_id", in="query", description="公報 ID", required=true,
+     *     @OA\Schema( type="string", example="LCIDC01_1077502_00003" )
      *   ),
      *   @OA\Response( response=200, description="回傳公報的 HTML 內容" ),
      *   @OA\Response( response=404, description="找不到公報" )
@@ -27,18 +29,17 @@ class APIDispatcher
      */
     public static function html()
     {
-        // Ex: meet_id LCIDC01_1077502_00003.doc
-        $meet_id = $_GET['meet_id'];
-        $content = file_get_contents('http://lydata.ronny-s3.click/publication-html/' . $meet_id);
+        $agenda_id = $_GET['agenda_id'];
+        $content = file_get_contents('https://lydata.ronny-s3.click/publication-html/' . $agenda_id . '.doc');
         if (!$obj = json_decode($content)) {
             header('HTTP/1.1 404 Not Found');
             echo '404 not found';
             return;
         }
         $content = base64_decode($obj->content);
-        $content = preg_replace_callback('#<img src="([^"]*)"#', function($matches) use ($meet_id) {
+        $content = preg_replace_callback('#<img src="([^"]*)"#', function($matches) use ($agenda_id) {
             $id = explode('_html_', $matches[1])[1];
-            return '<img src="https://lydata.ronny-s3.click/picfile/' . $meet_id . '-' . $id . '"';
+            return '<img src="https://lydata.ronny-s3.click/picfile/' . $agenda_id. '.doc-' . $id . '"';
         }, $content);
         echo $content;
     }
