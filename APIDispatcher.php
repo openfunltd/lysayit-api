@@ -209,11 +209,116 @@ class APIDispatcher
             $records[] = $record;
         }
         $ret->data = $records;
-        if (!array_key_exists('page', $_GET)) {
-            $ret = $ret->data;
-        }
         self::json_output($ret);
     }
+
+    /**
+     * 列出符合條件的公報章節
+     *
+     * @OA\Get(
+     *   path="/api/gazette_agenda",
+     *   summary="列出符合條件的公報章節",
+     *   tags={"公報"},
+     *   @OA\Parameter(
+     *     name="q", in="query", description="關鍵字", required=false,
+     *     @OA\Schema( type="string", example="蔡英文" )
+     *   ),
+     *   @OA\Parameter(
+     *     name="comYear", in="query", description="年別", required=false,
+     *     @OA\Schema( type="integer", example="109" )
+     *   ),
+     *   @OA\Parameter(
+     *     name="term", in="query", description="屆別", required=false,
+     *     @OA\Schema( type="integer", example="9" )
+     *   ),
+     *   @OA\Parameter(
+     *     name="sessionPeriod", in="query", description="會期", required=false,
+     *     @OA\Schema( type="integer", example="1" )
+     *   ),
+     *   @OA\Parameter(
+     *     name="meetingDate", in="query", description="會議日期", required=false,
+     *     @OA\Schema( type="string", example="2023-02-17" )
+     *   ),
+     *   @OA\Parameter(
+     *     name="meetingDateStart", in="query", description="會議日期起始", required=false,
+     *     @OA\Schema( type="string", example="2023-02-01" )
+     *   ),
+     *   @OA\Parameter(
+     *     name="meetingDateEnd", in="query", description="會議日期結束", required=false,
+     *     @OA\Schema( type="string", example="2023-02-28" )
+     *   ),
+     *   @OA\Response( response=200, description="列出符合條件的公報章節" )
+     * )
+     */
+    public static function gazetteAgenda()
+    {
+        $prefix = getenv('ELASTIC_PREFIX');
+        $page = @max($_GET['page'], 1);
+        $limit = @intval($_GET['limit']) ?: 100;
+        $cmd = [
+            'query' => [
+                'bool' => [
+                    'must' => [],
+                    'filter' => [],
+                ],
+            ],
+            'size' => $limit,
+            'from' => $limit * $page - $limit,
+        ];
+        if (array_key_exists('comYear', $_GET)) {
+            $cmd['query']['bool']['filter'][] = [
+                'term' => ['comYear' => intval($_GET['comYear'])],
+            ];
+        }
+        if (array_key_exists('term', $_GET)) {
+            $cmd['query']['bool']['filter'][] = [
+                'term' => ['term' => intval($_GET['term'])],
+            ];
+        }
+        if (array_key_exists('sessionPeriod', $_GET)) {
+            $cmd['query']['bool']['filter'][] = [
+                'term' => ['sessionPeriod' => intval($_GET['sessionPeriod'])],
+            ];
+        }
+        if (array_key_exists('meetingDate', $_GET)) {
+            $cmd['query']['bool']['filter'][] = [
+                'term' => ['meetingDate' => ($_GET['meetingDate'])],
+            ];
+        }
+        if (array_key_exists('meetingDateStart', $_GET) and array_key_exists('meetingDateEnd', $_GET)) {
+            $cmd['query']['bool']['filter'][] = [
+                'range' => ['meetingDate' => [
+                    'gte' => ($_GET['meetingDateStart']),
+                    'lte' => ($_GET['meetingDateEnd']),
+                ]],
+            ];
+        }
+        if (array_key_exists('q', $_GET)) {
+            // query string in subject
+            $cmd['query']['bool']['must'][] = [
+                'query_string' => [
+                    'query' => '"' . $_GET['q'] . '"',
+                    'fields' => ['subject'],
+                ],
+            ];
+        }
+        $obj = LYLib::dbQuery("/{$prefix}gazette_agenda/_search", 'GET', json_encode($cmd));
+
+        $records = array();
+        $ret = new StdClass;
+        $ret->total = $obj->hits->total->value;
+        $ret->limit = $limit;
+        $ret->totalpage = ceil($ret->total / $ret->limit);
+        $ret->page = $page;
+        foreach ($obj->hits->hits as $hit) {
+            $record = $hit->_source;
+            $record->id = $hit->_id;
+            $records[] = $record;
+        }
+        $ret->data = $records;
+        self::json_output($ret);
+    }
+
     /**
      * 列出所有的會議
      *
@@ -856,6 +961,8 @@ class APIDispatcher
             self::meet();
         } elseif ($method == 'gazette') {
             self::gazette();
+        } elseif ($method == 'gazette_agenda') {
+            self::gazetteAgenda();
         } elseif ($method == 'searchspeech') {
             self::searchspeech();
         } else if ($method == 'speech' and $meet_id = $params[0]) {
