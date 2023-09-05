@@ -3,6 +3,7 @@
 /**
  * @OA\Info(title="lysayit api", version="0.1")
  * @OA\Tag(name="公報", description="公報相關")
+ * @OA\Tag(name="委員", description="立法委員相關")
  */
 class APIDispatcher
 {
@@ -846,7 +847,17 @@ class APIDispatcher
      * 列出第 term 屆的發言者
      *
      * @OA\Get(
-     *   path="/api/term/{term}/speaker/{speaker_type}", summary="列出第 term 屆的發言者",
+     *   path="/api/term/{term}/speaker/0", summary="列出第 term 屆的立法委員",
+     *   tags={"委員"},
+     *   @OA\Parameter(
+     *     name="term", in="path", description="屆別", required=true,
+     *     @OA\Schema( type="integer", example="9" )
+     *   ),
+     *   @OA\Response( response=200, description="列出第 term 屆的立法委員" ),
+     *   @OA\Response( response=404, description="找不到" )
+     * )
+     * @OA\Get(
+     *   path="/api/term/{term}/speaker/1", summary="列出第 term 屆的非立委發言者",
      *   @OA\Parameter(
      *     name="term", in="path", description="屆別", required=true,
      *     @OA\Schema( type="integer", example="9" )
@@ -856,7 +867,7 @@ class APIDispatcher
      *     @OA\Schema( type="integer", example="1" )
      *   ),
      *   @OA\Response( response=200, description="列出第 term 屆的發言者" ),
-     *   @OA\Response( response=404, description="找不到公報" )
+     *   @OA\Response( response=404, description="找不到" )
      * )
      *
      */
@@ -903,7 +914,7 @@ class APIDispatcher
         $records->limit = $limit;
         $records->persons = [];
         foreach (array_slice($obj->aggregations->speaker_agg->buckets, 100 * $page - 100, 100) as $bucket) {
-            $key = $records->term . '-' . $bucket->key;
+            $key = sprintf("%02d", $records->term) . '-' . $bucket->key;
             if (array_key_exists($key, $records->persons)) {
                 continue;
             }
