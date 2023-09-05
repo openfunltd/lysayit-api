@@ -396,11 +396,31 @@ paths:
           description: '列出 name 的所有投票記錄'
         '404':
           description: 找不到公報
-  '/api/term/{term}/speaker/{speaker_type}':
+  '/api/term/{term}/speaker/0':
     get:
-      summary: '列出第 term 屆的發言者'
+      tags:
+        - 委員
+      summary: '列出第 term 屆的立法委員'
       description: '列出第 term 屆的發言者'
-      operationId: 002b9b5cbe57d817ce7617976d7b156a
+      operationId: d37936bb747b044b91896d61e0bff15e
+      parameters:
+        -
+          name: term
+          in: path
+          description: 屆別
+          required: true
+          schema:
+            type: integer
+            example: '9'
+      responses:
+        '200':
+          description: '列出第 term 屆的立法委員'
+        '404':
+          description: 找不到
+  '/api/term/{term}/speaker/1':
+    get:
+      summary: '列出第 term 屆的非立委發言者'
+      operationId: 6ea5379e473fe0f544a4fd4e19287a90
       parameters:
         -
           name: term
@@ -422,8 +442,11 @@ paths:
         '200':
           description: '列出第 term 屆的發言者'
         '404':
-          description: 找不到公報
+          description: 找不到
 tags:
   -
     name: 公報
     description: 公報相關
+  -
+    name: 委員
+    description: 立法委員相關
